@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(xargs grep -l -i \"tenant\")",
+      "Bash(xargs grep -l -i \"profile\\\\|user\\\\|me\")",
+      "Bash(xargs grep -l \"users/me\\\\|UserService\\\\|changePassword\\\\|updateProfile\")",
+      "PowerShell(New-Item *)",
+      "PowerShell(Get-Process *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Start-Sleep -Seconds 20; $result = try { Invoke-WebRequest -Uri \"http://localhost:8080/actuator/health\" -UseBasicParsing -TimeoutSec 5 } catch { $null }; if \\($result -and $result.StatusCode -eq 200\\) { Write-Host \"Backend UP : $\\($result.Content\\)\" } else { Write-Host \"Backend pas encore prêt ou erreur\" })",
+      "PowerShell(Start-Sleep -Seconds 20; $result = try { Invoke-WebRequest -Uri \"http://localhost:8080/actuator/health\" -UseBasicParsing -TimeoutSec 5 } catch { $_.Exception.Message }; Write-Host $result)",
+      "PowerShell($result = try { Invoke-WebRequest -Uri \"http://localhost:8080/api/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"identifier\":\"test@test.com\",\"password\":\"wrong\"}' -UseBasicParsing -TimeoutSec 5 } catch { $_.Exception.Response }; if \\($result\\) { Write-Host \"Status: $\\($result.StatusCode\\)\" } else { Write-Host \"Pas de réponse\" })",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:8080/api/auth/login -H \"Content-Type: application/json\" -d '{\"identifier\":\"x\",\"password\":\"x\"}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/api/portal/test-token)",
+      "Bash(curl *)"
+    ]
+  }
+}
