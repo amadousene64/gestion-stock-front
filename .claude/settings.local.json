@@ -14,7 +14,10 @@
       "PowerShell($result = try { Invoke-WebRequest -Uri \"http://localhost:8080/api/auth/login\" -Method POST -ContentType \"application/json\" -Body '{\"identifier\":\"test@test.com\",\"password\":\"wrong\"}' -UseBasicParsing -TimeoutSec 5 } catch { $_.Exception.Response }; if \\($result\\) { Write-Host \"Status: $\\($result.StatusCode\\)\" } else { Write-Host \"Pas de réponse\" })",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" -X POST http://localhost:8080/api/auth/login -H \"Content-Type: application/json\" -d '{\"identifier\":\"x\",\"password\":\"x\"}')",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/api/portal/test-token)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(./mvnw clean *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(m.upper\\(\\), p\\) for p,ops in d.get\\('paths',{}\\).items\\(\\) for m in ops if any\\(x in p for x in ['employee','user','staff']\\)]\")",
+      "PowerShell(try { $r = Invoke-RestMethod \"http://localhost:8080/v3/api-docs\" -TimeoutSec 5; $r.paths.PSObject.Properties | Where-Object { $_.Name -match 'employ|user|staff|member' } | ForEach-Object { $_.Name + \" => \" + \\($_.Value.PSObject.Properties.Name -join \", \"\\) } } catch { \"Backend non joignable: $_\" })"
     ]
   }
 }

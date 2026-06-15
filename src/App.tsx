@@ -20,6 +20,7 @@ import EmployesPage from './pages/EmployesPage';
 import DepensesPage from './pages/DepensesPage';
 import ProfilPage from './pages/ProfilPage';
 import ParametresCommercePage from './pages/ParametresCommercePage';
+import FacturesPage from './pages/FacturesPage';
 import PortailClientPage from './pages/PortailClientPage';
 
 export default function App() {
@@ -50,6 +51,7 @@ export default function App() {
                     <Route path="/employes"            element={<EmployesPage />} />
                     <Route path="/depenses"            element={<DepensesPage />} />
                     <Route path="/profil"              element={<ProfilPage />} />
+                    <Route path="/factures"            element={<FacturesPage />} />
                     <Route path="/parametres-commerce" element={<ParametresCommercePage />} />
                   </Route>
                 </Route>
