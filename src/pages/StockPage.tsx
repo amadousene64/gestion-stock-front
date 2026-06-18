@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PackagePlus, ArrowLeftRight, ClipboardList, Sliders,
-  ChevronDown, ChevronUp, AlertTriangle, Loader2, Check, X,
+  ChevronDown, ChevronUp, AlertTriangle, Loader2, Check, X, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2,
 } from 'lucide-react';
+import { exportApi } from '../services/exportApi';
+import { importApi } from '../services/importApi';
+import type { StockImportPreview, StockImportRow } from '../services/importApi';
 import { useBoutique } from '../contexts/BoutiqueContext';
 import { stockApi } from '../services/stockApi';
 import type { StockPosition, StockMovement } from '../services/stockApi';
@@ -12,6 +15,8 @@ import type { Product, Unit } from '../types/catalogue';
 import type { Location } from '../types/location';
 import { extractApiError } from '../lib/apiError';
 import Button from '../components/ui/Button';
+import PageActions from '../components/ui/PageActions';
+import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
@@ -21,6 +26,7 @@ import EmptyState from '../components/ui/EmptyState';
 
 const MOVE_LABELS: Record<string, string> = {
   purchase:     'Approvisionnement',
+  import:       'Import stock initial',
   sale:         'Vente',
   transfer_in:  'Transfert entrant',
   transfer_out: 'Transfert sortant',
@@ -60,6 +66,261 @@ interface ProductRow {
 }
 
 type ModalType = 'supply' | 'transfer' | 'adjustment' | 'inventory';
+
+/* ─── Modale : Import stock ───────────────────────────────── */
+
+type ImportStep = 'upload' | 'preview' | 'done';
+
+function StockImportModal({
+  storeId, onClose, onImported,
+}: { storeId: string | null; onClose: () => void; onImported: () => void }) {
+  const [step,      setStep]      = useState<ImportStep>('upload');
+  const [file,      setFile]      = useState<File | null>(null);
+  const [preview,   setPreview]   = useState<StockImportPreview | null>(null);
+  const [imported,  setImported]  = useState(0);
+  const [loading,   setLoading]   = useState(false);
+  const [dlLoading, setDlLoading] = useState(false);
+  const [dragging,  setDragging]  = useState(false);
+  const [error,     setError]     = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const pickFile = (f: File | null) => {
+    if (!f) return;
+    if (!f.name.endsWith('.xlsx')) { setError('Format invalide — veuillez choisir un fichier .xlsx'); return; }
+    setFile(f); setError('');
+  };
+
+  const handlePreview = async () => {
+    if (!file) return;
+    if (!storeId) { setError('Veuillez sélectionner une boutique active avant d\'importer du stock.'); return; }
+    setLoading(true); setError('');
+    try {
+      setPreview(await importApi.previewStock(file, storeId));
+      setStep('preview');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erreur lors de la lecture du fichier');
+    } finally { setLoading(false); }
+  };
+
+  const handleConfirm = async () => {
+    if (!file || !storeId) return;
+    setLoading(true); setError('');
+    try {
+      const r = await importApi.confirmStock(file, storeId);
+      setImported(r.imported);
+      setStep('done');
+      onImported();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erreur lors de l'importation");
+    } finally { setLoading(false); }
+  };
+
+  const pluriel = (n: number, w: string) => `${n} ${w}${n !== 1 ? 's' : ''}`;
+
+  const formatQty = (q: number | null) => q != null ? new Intl.NumberFormat('fr-FR').format(q) : '—';
+
+  const handleDownloadTemplate = async () => {
+    setDlLoading(true); setError('');
+    try { await importApi.downloadStockTemplate(storeId); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur lors du téléchargement du modèle'); }
+    finally { setDlLoading(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
+      <div className="bg-surface rounded-t-2xl sm:rounded-card shadow-2xl w-full sm:max-w-2xl max-h-[95vh] flex flex-col">
+
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet size={20} className="text-brand-500 shrink-0" />
+            <h2 className="font-display text-base font-bold text-ink">
+              {step === 'upload'  && 'Importer du stock initial (Excel)'}
+              {step === 'preview' && 'Prévisualisation — vérifiez avant d\'importer'}
+              {step === 'done'    && 'Importation terminée'}
+            </h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-full text-muted hover:text-ink hover:bg-canvas transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+
+          {step === 'upload' && (
+            <>
+              {!storeId && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
+                  <AlertCircle size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-sm text-amber-800">
+                    <strong>Aucune boutique sélectionnée.</strong> Veuillez sélectionner une boutique active pour importer du stock.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-start gap-3 bg-canvas rounded-xl border border-line p-4">
+                <Download size={18} className="text-brand-500 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-sm font-semibold text-ink">Pas encore de modèle ?</p>
+                  <p className="text-xs text-muted">Colonnes : <strong>Produit (nom ou SKU) *</strong> | <strong>Emplacement *</strong> | <strong>Quantité *</strong></p>
+                  <p className="text-xs text-muted">Les mouvements créés seront de type <em>Approvisionnement</em>.</p>
+                  <button onClick={handleDownloadTemplate}
+                    disabled={dlLoading}
+                    className="inline-flex items-center gap-1.5 mt-1 text-sm font-semibold text-brand-500 hover:underline disabled:opacity-60">
+                    {dlLoading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                    Télécharger le modèle (.xlsx)
+                  </button>
+                </div>
+              </div>
+
+              {!file ? (
+                <div onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={e => { e.preventDefault(); setDragging(false); pickFile(e.dataTransfer.files?.[0] ?? null); }}
+                  onClick={() => inputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all select-none ${dragging ? 'border-brand-500 bg-brand-50 scale-[1.01]' : 'border-line hover:border-brand-500 hover:bg-canvas'}`}>
+                  <Upload size={36} className={`mx-auto mb-3 ${dragging ? 'text-brand-500' : 'text-muted'}`} />
+                  <p className="text-sm font-semibold text-ink mb-1">{dragging ? 'Relâchez pour charger le fichier' : 'Glissez-déposez votre fichier ici'}</p>
+                  <p className="text-xs text-muted">ou cliquez pour parcourir — fichiers .xlsx uniquement</p>
+                </div>
+              ) : (
+                <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 p-5 space-y-3">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                      <FileSpreadsheet size={24} className="text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                        <p className="text-sm font-bold text-emerald-700">Fichier prêt</p>
+                      </div>
+                      <p className="text-sm font-semibold text-ink truncate">{file.name}</p>
+                      <p className="text-xs text-muted">{(file.size / 1024).toFixed(0)} Ko</p>
+                    </div>
+                  </div>
+                  <Button onClick={handlePreview} disabled={loading || !storeId} className="w-full">
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Analyse en cours…</> : <><CheckCircle2 size={18} /> Analyser le fichier</>}
+                  </Button>
+                  <button onClick={() => { setFile(null); setError(''); if (inputRef.current) inputRef.current.value = ''; }}
+                    disabled={loading} className="w-full py-1.5 text-sm font-medium text-muted hover:text-ink transition-colors disabled:opacity-40">
+                    Changer de fichier
+                  </button>
+                </div>
+              )}
+
+              <input ref={inputRef} type="file" accept=".xlsx" onChange={e => pickFile(e.target.files?.[0] ?? null)} className="hidden" />
+
+              {error && <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200">
+                <AlertCircle size={16} className="text-danger mt-0.5 shrink-0" /><p className="text-sm text-danger">{error}</p>
+              </div>}
+            </>
+          )}
+
+          {step === 'preview' && preview && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-center">
+                  <p className="text-2xl font-bold text-emerald-700">{preview.validCount}</p>
+                  <p className="text-xs font-semibold text-emerald-600 mt-0.5">ligne{preview.validCount !== 1 ? 's' : ''} valide{preview.validCount !== 1 ? 's' : ''}</p>
+                </div>
+                <div className={`rounded-xl border p-4 text-center ${preview.errorCount > 0 ? 'bg-red-50 border-red-200' : 'bg-canvas border-line'}`}>
+                  <p className={`text-2xl font-bold ${preview.errorCount > 0 ? 'text-danger' : 'text-muted'}`}>{preview.errorCount}</p>
+                  <p className={`text-xs font-semibold mt-0.5 ${preview.errorCount > 0 ? 'text-danger' : 'text-muted'}`}>ligne{preview.errorCount !== 1 ? 's' : ''} en erreur</p>
+                </div>
+              </div>
+
+              {preview.validCount === 0 && (
+                <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-center">
+                  <p className="text-sm font-bold text-danger">Aucune ligne importable</p>
+                  <p className="text-xs text-muted mt-1">Corrigez les erreurs dans votre fichier et recommencez.</p>
+                </div>
+              )}
+
+              <div className="overflow-x-auto rounded-xl border border-line">
+                <table className="w-full text-sm min-w-[500px]">
+                  <thead>
+                    <tr className="text-xs text-muted uppercase bg-canvas border-b border-line">
+                      <th className="px-3 py-2.5 text-left font-medium w-8">#</th>
+                      <th className="px-3 py-2.5 text-left font-medium">Produit</th>
+                      <th className="px-3 py-2.5 text-left font-medium">Emplacement</th>
+                      <th className="px-3 py-2.5 text-right font-medium">Qté</th>
+                      <th className="px-3 py-2.5 text-left font-medium">Statut / Erreur</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {preview.rows.map((row: StockImportRow) => {
+                      const isErr = row.status === 'error';
+                      return (
+                        <tr key={row.rowNumber} className={isErr ? 'bg-red-50/70' : 'bg-emerald-50/30'}>
+                          <td className="px-3 py-2.5 text-xs text-muted">{row.rowNumber}</td>
+                          <td className="px-3 py-2.5">
+                            <p className="font-medium text-ink text-xs">{row.resolvedProductName ?? row.productIdentifier}</p>
+                            {row.resolvedProductName && row.resolvedProductName !== row.productIdentifier && (
+                              <p className="text-xs text-muted">({row.productIdentifier})</p>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-muted text-xs">{row.locationName || '—'}</td>
+                          <td className="px-3 py-2.5 text-right text-muted text-xs">{formatQty(row.quantity)}</td>
+                          <td className="px-3 py-2.5">
+                            {isErr ? (
+                              <div className="space-y-1">
+                                {row.errors.map((e, i) => (
+                                  <p key={i} className="text-xs text-danger flex items-start gap-1">
+                                    <AlertCircle size={11} className="mt-0.5 shrink-0" /> {e}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                <CheckCircle2 size={11} /> Valide
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {preview.validCount > 0 && (
+                <Button onClick={handleConfirm} disabled={loading} className="w-full">
+                  {loading ? <><Loader2 size={18} className="animate-spin" /> Importation en cours…</> : <><CheckCircle2 size={18} /> Importer les {pluriel(preview.validCount, 'mouvement')} valide{preview.validCount !== 1 ? 's' : ''}</>}
+                </Button>
+              )}
+              {error && <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200">
+                <AlertCircle size={16} className="text-danger mt-0.5 shrink-0" /><p className="text-sm text-danger">{error}</p>
+              </div>}
+            </>
+          )}
+
+          {step === 'done' && (
+            <div className="py-8 text-center space-y-4">
+              <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                <CheckCircle2 size={40} className="text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-ink">{pluriel(imported, 'mouvement')} importé{imported !== 1 ? 's' : ''} !</p>
+                <p className="text-sm text-muted mt-1">Le stock a été mis à jour.</p>
+              </div>
+              <Button onClick={onClose} className="px-8">Fermer</Button>
+            </div>
+          )}
+        </div>
+
+        {(step === 'upload' || step === 'preview') && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-line shrink-0 bg-canvas rounded-b-2xl sm:rounded-b-card">
+            {step === 'preview' ? (
+              <button onClick={() => { setStep('upload'); setError(''); }} disabled={loading}
+                className="text-sm font-semibold text-muted hover:text-ink transition-colors disabled:opacity-40">← Changer de fichier</button>
+            ) : <span />}
+            <button onClick={onClose} disabled={loading}
+              className="text-sm font-semibold text-muted hover:text-ink transition-colors disabled:opacity-40">Annuler</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ─── Modale : Approvisionner ─────────────────────────────── */
 
@@ -397,34 +658,55 @@ export default function StockPage() {
   const [loadingMov, setLoadingMov] = useState(false);
 
   /* ── UI ──────────────────────────────────────────────── */
-  const [tab,      setTab]     = useState<'stock' | 'mouvements'>('stock');
-  const [modal,    setModal]   = useState<ModalType | null>(null);
-  const [search,   setSearch]  = useState('');
-  const [movProd,  setMovProd] = useState('');
+  const [tab,       setTab]      = useState<'stock' | 'mouvements'>('stock');
+  const [modal,     setModal]    = useState<ModalType | null>(null);
+  const [search,    setSearch]   = useState('');
+  const [movProd,   setMovProd]  = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [movLoaded, setMovLoaded] = useState(false);
 
-  /* ── Chargement des données de référence ─────────────── */
-  const loadRef = () => {
+  /* ── Chargement ────────────────────────────────────────── */
+  const loadStock = () => {
     setLoadingRef(true);
+    setMovLoaded(false);
+    setMovements([]);
     Promise.all([
-      stockApi.getPositions(),
+      stockApi.getPositions(activeBoutiqueId),
       productsApi.list(),
       unitsApi.list(),
       locationsApi.list(),
     ]).then(([pos, prods, us, locs]) => {
-      setPositions(pos);
-      setProducts(prods);
-      setUnits(us);
-      setLocations(locs);
+      setPositions(pos); setProducts(prods); setUnits(us); setLocations(locs);
     }).finally(() => setLoadingRef(false));
   };
 
-  useEffect(() => { loadRef(); }, []);
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingRef(true);
+    setMovLoaded(false);
+    setMovements([]);
+    Promise.all([
+      stockApi.getPositions(activeBoutiqueId),
+      productsApi.list(),
+      unitsApi.list(),
+      locationsApi.list(),
+    ]).then(([pos, prods, us, locs]) => {
+      if (!cancelled) {
+        setPositions(pos);
+        setProducts(prods);
+        setUnits(us);
+        setLocations(locs);
+      }
+    }).finally(() => { if (!cancelled) setLoadingRef(false); });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBoutiqueId]);
 
   const loadMovements = () => {
     setLoadingMov(true);
-    stockApi.getMovements()
+    stockApi.getMovements(activeBoutiqueId)
       .then(setMovements)
       .finally(() => { setLoadingMov(false); setMovLoaded(true); });
   };
@@ -438,8 +720,8 @@ export default function StockPage() {
   /* Recharge après une mutation */
   const onSuccess = () => {
     setModal(null);
-    stockApi.getPositions().then(setPositions);
-    if (movLoaded) stockApi.getMovements().then(setMovements);
+    stockApi.getPositions(activeBoutiqueId).then(setPositions);
+    if (movLoaded) stockApi.getMovements(activeBoutiqueId).then(setMovements);
   };
 
   /* ── Filtrage par boutique active ─────────────────────── */
@@ -507,26 +789,28 @@ export default function StockPage() {
 
   /* ── Rendu ────────────────────────────────────────────── */
   return (
-    <div className="py-6 md:py-8 space-y-5">
+    <div className="space-y-5">
 
       {/* En-tête + actions */}
-      <div className="flex items-start justify-between gap-3">
-        <h1 className="font-display text-xl font-bold text-ink">Stock</h1>
-        <div className="flex gap-2 flex-wrap justify-end">
-          <Button onClick={() => setModal('supply')} className="min-h-[40px] px-3 text-sm">
-            <PackagePlus size={16} /> Approvisionner
-          </Button>
-          <Button variant="secondary" onClick={() => setModal('transfer')} className="min-h-[40px] px-3 text-sm">
-            <ArrowLeftRight size={16} /> Transférer
-          </Button>
-          <Button variant="secondary" onClick={() => setModal('adjustment')} className="min-h-[40px] px-3 text-sm">
-            <Sliders size={16} /> Ajustement
-          </Button>
-          <Button variant="secondary" onClick={() => setModal('inventory')} className="min-h-[40px] px-3 text-sm">
-            <ClipboardList size={16} /> Inventaire
-          </Button>
-        </div>
-      </div>
+      <PageHeader title={<h1 className="font-display text-xl font-bold text-ink">Stock</h1>}>
+        <PageActions
+          primary={
+            <Button onClick={() => setModal('supply')} className="min-h-[48px] px-3 text-sm">
+              <PackagePlus size={16} /> Approvisionner
+            </Button>
+          }
+          secondary={[
+            { label: 'Transférer',  icon: <ArrowLeftRight size={16} />, onClick: () => setModal('transfer') },
+            { label: 'Ajustement',  icon: <Sliders size={16} />,        onClick: () => setModal('adjustment') },
+            { label: 'Inventaire',  icon: <ClipboardList size={16} />,  onClick: () => setModal('inventory') },
+            { label: 'Importer',    icon: <Upload size={14} />,          onClick: () => setImporting(true) },
+            {
+              label: 'Exporter', icon: <Download size={14} />, loading: exporting,
+              onClick: () => { setExporting(true); exportApi.stock(activeBoutiqueId).finally(() => setExporting(false)); },
+            },
+          ]}
+        />
+      </PageHeader>
 
       {/* Alerte stock bas */}
       {!loadingRef && alertCount > 0 && (
@@ -720,6 +1004,14 @@ export default function StockPage() {
           products={products} units={units} locations={locations}
           positions={positions}
           onSuccess={onSuccess} onClose={() => setModal(null)}
+        />
+      )}
+
+      {importing && (
+        <StockImportModal
+          storeId={activeBoutiqueId}
+          onClose={() => setImporting(false)}
+          onImported={() => { setImporting(false); loadStock(); }}
         />
       )}
 

@@ -11,6 +11,7 @@ import type { Boutique, BoutiqueDto } from '../types/boutique';
 import type { Location } from '../types/location';
 import { extractApiError } from '../lib/apiError';
 import Button from '../components/ui/Button';
+import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
@@ -381,16 +382,13 @@ export default function BoutiquesPage() {
 
   /* ── Rendu ────────────────────────────────────────────── */
   return (
-    <div className="py-6 md:py-8 space-y-6">
+    <div className="space-y-6">
 
       {/* ── Boutiques ─────────────────────────────────── */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <h1 className="font-display text-xl font-bold text-ink">Boutiques</h1>
-          <Button onClick={openCreate} className="shrink-0">
-            <Plus size={18} /> Ajouter
-          </Button>
-        </div>
+        <PageHeader title={<h1 className="font-display text-xl font-bold text-ink">Boutiques</h1>}>
+          <Button onClick={openCreate}><Plus size={18} /> Ajouter</Button>
+        </PageHeader>
 
         {loading ? (
           <div className="py-8 flex justify-center">
@@ -457,21 +455,18 @@ export default function BoutiquesPage() {
 
       {/* ── Entrepôts communs ─────────────────────────── */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
+        <PageHeader title={
           <div>
             <h2 className="font-display text-lg font-bold text-ink flex items-center gap-2">
               <Warehouse size={18} /> Entrepôts communs
             </h2>
             <p className="text-xs text-muted mt-0.5">Partagés entre toutes les boutiques</p>
           </div>
-          <Button
-            variant="secondary"
-            onClick={() => setSharedModal('create')}
-            className="shrink-0 min-h-[40px] px-3 text-sm"
-          >
+        }>
+          <Button variant="secondary" onClick={() => setSharedModal('create')} className="px-3 text-sm">
             <Plus size={16} /> Ajouter
           </Button>
-        </div>
+        </PageHeader>
 
         {!loading && sharedWarehouses.length === 0 && (
           <div className="bg-surface rounded-card shadow-card px-4 py-6 text-center space-y-2">

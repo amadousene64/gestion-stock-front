@@ -8,7 +8,7 @@ const TABS = [
 
 export default function ProduitsPage() {
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="-mt-6 md:-mt-8 flex flex-col min-h-full">
       {/*
         Le tab bar doit être bord-à-bord dans la colonne de contenu.
         AppLayout ajoute px-4 md:px-8 ; on l'annule ici avec -mx-4 md:-mx-8,

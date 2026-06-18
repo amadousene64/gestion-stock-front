@@ -1,245 +1,256 @@
-import { useEffect, useState } from 'react';
-import {
-  Plus, Pencil, X, Check, Loader2, Share2, Copy, Trash2, Phone,
-  ChevronDown, ChevronUp,
-} from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Plus, X, Check, Loader2, Phone, ChevronRight, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { exportApi } from '../services/exportApi';
+import { importApi } from '../services/importApi';
+import type { CustomerImportPreview, CustomerImportRow } from '../services/importApi';
 import { customersApi } from '../services/customersApi';
-import type { Customer, LedgerEntry } from '../types/customer';
+import type { Customer } from '../types/customer';
 import { extractApiError } from '../lib/apiError';
-import { formatFCFA } from '../lib/format';
 import Button from '../components/ui/Button';
+import PageActions from '../components/ui/PageActions';
+import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
 
-type CustomerForm = { name: string; phone: string };
-const EMPTY_FORM: CustomerForm = { name: '', phone: '' };
+// ─── Import Modal ─────────────────────────────────────────────────────────────
 
-const TYPE_LABELS: Record<string, string> = {
-  deposit:     'Acompte versé',
-  payment:     'Remboursement dette',
-  credit_sale: 'Vente à crédit',
-  refund:      'Remboursement',
-  adjustment:  'Ajustement',
-};
+type ImportStep = 'upload' | 'preview' | 'done';
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-}
+function CustomerImportModal({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
+  const [step,      setStep]      = useState<ImportStep>('upload');
+  const [file,      setFile]      = useState<File | null>(null);
+  const [preview,   setPreview]   = useState<CustomerImportPreview | null>(null);
+  const [imported,  setImported]  = useState(0);
+  const [loading,   setLoading]   = useState(false);
+  const [dlLoading, setDlLoading] = useState(false);
+  const [dragging,  setDragging]  = useState(false);
+  const [error,     setError]     = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
-// ─── Panneau de détail client ─────────────────────────────────────────────────
+  const pickFile = (f: File | null) => {
+    if (!f) return;
+    if (!f.name.endsWith('.xlsx')) { setError('Format invalide — veuillez choisir un fichier .xlsx'); return; }
+    setFile(f); setError('');
+  };
 
-interface DetailPanelProps {
-  customer: Customer;
-  onClose: () => void;
-  onEdit:  () => void;
-}
-
-function DetailPanel({ customer, onClose, onEdit }: DetailPanelProps) {
-  const [balance,       setBalance]       = useState<number | null>(null);
-  const [ledger,        setLedger]        = useState<LedgerEntry[]>([]);
-  const [loadingData,   setLoadingData]   = useState(true);
-  const [showLedger,    setShowLedger]    = useState(false);
-
-  // partage
-  const [shareUrl,      setShareUrl]      = useState<string | null>(null);
-  const [sharing,       setSharing]       = useState(false);
-  const [revoking,      setRevoking]      = useState(false);
-  const [copied,        setCopied]        = useState(false);
-  const [shareErr,      setShareErr]      = useState('');
-
-  useEffect(() => {
-    setLoadingData(true);
-    Promise.all([
-      customersApi.getBalance(customer.id),
-      customersApi.getLedger(customer.id),
-    ]).then(([bal, led]) => {
-      setBalance(bal.balance);
-      setLedger(led);
-    }).finally(() => setLoadingData(false));
-  }, [customer.id]);
-
-  const handleShare = async () => {
-    setSharing(true);
-    setShareErr('');
+  const handlePreview = async () => {
+    if (!file) return;
+    setLoading(true); setError('');
     try {
-      const { url } = await customersApi.generatePortalLink(customer.id);
-      setShareUrl(url);
-    } catch (e) {
-      setShareErr(extractApiError(e));
-    } finally {
-      setSharing(false);
-    }
+      setPreview(await importApi.previewCustomers(file));
+      setStep('preview');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erreur lors de la lecture du fichier');
+    } finally { setLoading(false); }
   };
 
-  const handleRevoke = async () => {
-    setRevoking(true);
+  const handleConfirm = async () => {
+    if (!file) return;
+    setLoading(true); setError('');
     try {
-      await customersApi.revokePortalLink(customer.id);
-      setShareUrl(null);
-    } catch (e) {
-      setShareErr(extractApiError(e));
-    } finally {
-      setRevoking(false);
-    }
+      const r = await importApi.confirmCustomers(file);
+      setImported(r.imported);
+      setStep('done');
+      onImported();
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Erreur lors de l'importation");
+    } finally { setLoading(false); }
   };
 
-  const copyLink = () => {
-    if (!shareUrl) return;
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
+  const handleDownloadTemplate = async () => {
+    setDlLoading(true); setError('');
+    try { await importApi.downloadCustomerTemplate(); }
+    catch (e: unknown) { setError(e instanceof Error ? e.message : 'Erreur lors du téléchargement du modèle'); }
+    finally { setDlLoading(false); }
   };
 
-  const whatsappLink = shareUrl
-    ? `https://wa.me/?text=${encodeURIComponent('Consultez votre compte ici : ' + shareUrl)}`
-    : '';
-
-  const balanceColor = balance === null ? '' : balance >= 0 ? 'text-emerald-600' : 'text-red-500';
-  const balanceLabel = balance === null ? '—' : balance >= 0
-    ? `Avoir : ${formatFCFA(balance)}`
-    : `Doit : ${formatFCFA(Math.abs(balance))}`;
+  const pluriel = (n: number, w: string) => `${n} ${w}${n !== 1 ? 's' : ''}`;
 
   return (
-    <Modal title={customer.name} onClose={onClose}>
-      <div className="space-y-5">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4 bg-black/50">
+      <div className="bg-surface rounded-t-2xl sm:rounded-card shadow-2xl w-full sm:max-w-2xl max-h-[95vh] flex flex-col">
 
-        {/* Infos de base */}
-        <div className="flex items-center justify-between">
-          <div>
-            {customer.phone && (
-              <p className="flex items-center gap-1 text-sm text-muted">
-                <Phone size={14} /> {customer.phone}
-              </p>
-            )}
-            <p className="text-xs text-muted mt-0.5">
-              Client depuis le {fmtDate(customer.createdAt)}
-            </p>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-line shrink-0">
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet size={20} className="text-brand-500 shrink-0" />
+            <h2 className="font-display text-base font-bold text-ink">
+              {step === 'upload'  && 'Importer des clients (Excel)'}
+              {step === 'preview' && 'Prévisualisation — vérifiez avant d\'importer'}
+              {step === 'done'    && 'Importation terminée'}
+            </h2>
           </div>
-          <Button variant="ghost" onClick={onEdit} className="min-h-[36px] px-3 text-sm">
-            <Pencil size={15} /> Modifier
-          </Button>
+          <button onClick={onClose} className="p-1.5 rounded-full text-muted hover:text-ink hover:bg-canvas transition-colors">
+            <X size={20} />
+          </button>
         </div>
 
-        {/* Solde */}
-        {loadingData ? (
-          <p className="text-sm text-muted py-2">Chargement du solde…</p>
-        ) : (
-          <div className="bg-canvas rounded-card px-4 py-3 text-center">
-            <p className="text-xs text-muted uppercase tracking-wide mb-1">Solde du compte</p>
-            <p className={`text-2xl font-bold ${balanceColor}`}>{balanceLabel}</p>
-          </div>
-        )}
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
 
-        {/* Historique des écritures (accordéon) */}
-        {!loadingData && (
-          <div>
-            <button
-              onClick={() => setShowLedger(v => !v)}
-              className="w-full flex items-center justify-between py-2 text-sm font-semibold text-ink"
-            >
-              Historique des écritures ({ledger.length})
-              {showLedger ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            </button>
-
-            {showLedger && (
-              <div className="divide-y divide-line border border-line rounded-card mt-1 text-sm overflow-hidden">
-                {ledger.length === 0 ? (
-                  <p className="px-4 py-3 text-muted text-center">Aucune écriture</p>
-                ) : (
-                  ledger.map(e => (
-                    <div key={e.id} className="flex items-center justify-between px-4 py-2.5 gap-3">
-                      <div className="min-w-0">
-                        <p className="font-medium text-ink truncate">
-                          {TYPE_LABELS[e.type] ?? e.type}
-                        </p>
-                        <p className="text-xs text-muted">{fmtDate(e.createdAt)}</p>
-                      </div>
-                      <p className={`shrink-0 font-semibold ${e.amount >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-                        {e.amount >= 0 ? '+' : ''}{formatFCFA(e.amount)}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Partage du portail */}
-        <div className="border-t border-line pt-4 space-y-3">
-          <p className="text-sm font-semibold text-ink">Espace client partageable</p>
-
-          {!shareUrl ? (
+          {step === 'upload' && (
             <>
-              <p className="text-sm text-muted">
-                Générez un lien unique pour que ce client consulte son solde et ses factures.
-              </p>
-              <Button onClick={handleShare} disabled={sharing} className="w-full">
-                {sharing
-                  ? <><Loader2 size={18} className="animate-spin" /> Génération…</>
-                  : <><Share2 size={18} /> Partager l'espace client</>
-                }
-              </Button>
+              <div className="flex items-start gap-3 bg-canvas rounded-xl border border-line p-4">
+                <Download size={18} className="text-brand-500 mt-0.5 shrink-0" />
+                <div className="flex-1 min-w-0 space-y-1">
+                  <p className="text-sm font-semibold text-ink">Pas encore de modèle ?</p>
+                  <p className="text-xs text-muted">Colonnes : <strong>Nom *</strong> | <strong>Téléphone *</strong></p>
+                  <button onClick={handleDownloadTemplate}
+                    disabled={dlLoading}
+                    className="inline-flex items-center gap-1.5 mt-1 text-sm font-semibold text-brand-500 hover:underline disabled:opacity-60">
+                    {dlLoading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                    Télécharger le modèle (.xlsx)
+                  </button>
+                </div>
+              </div>
+
+              {!file ? (
+                <div onDragOver={e => { e.preventDefault(); setDragging(true); }}
+                  onDragLeave={() => setDragging(false)}
+                  onDrop={e => { e.preventDefault(); setDragging(false); pickFile(e.dataTransfer.files?.[0] ?? null); }}
+                  onClick={() => inputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all select-none ${dragging ? 'border-brand-500 bg-brand-50 scale-[1.01]' : 'border-line hover:border-brand-500 hover:bg-canvas'}`}>
+                  <Upload size={36} className={`mx-auto mb-3 ${dragging ? 'text-brand-500' : 'text-muted'}`} />
+                  <p className="text-sm font-semibold text-ink mb-1">{dragging ? 'Relâchez pour charger le fichier' : 'Glissez-déposez votre fichier ici'}</p>
+                  <p className="text-xs text-muted">ou cliquez pour parcourir — fichiers .xlsx uniquement</p>
+                </div>
+              ) : (
+                <div className="rounded-xl border-2 border-emerald-500 bg-emerald-50 p-5 space-y-3">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+                      <FileSpreadsheet size={24} className="text-emerald-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                        <p className="text-sm font-bold text-emerald-700">Fichier prêt</p>
+                      </div>
+                      <p className="text-sm font-semibold text-ink truncate">{file.name}</p>
+                      <p className="text-xs text-muted">{(file.size / 1024).toFixed(0)} Ko</p>
+                    </div>
+                  </div>
+                  <Button onClick={handlePreview} disabled={loading} className="w-full">
+                    {loading ? <><Loader2 size={18} className="animate-spin" /> Analyse en cours…</> : <><CheckCircle2 size={18} /> Analyser le fichier</>}
+                  </Button>
+                  <button onClick={() => { setFile(null); setError(''); if (inputRef.current) inputRef.current.value = ''; }}
+                    disabled={loading} className="w-full py-1.5 text-sm font-medium text-muted hover:text-ink transition-colors disabled:opacity-40">
+                    Changer de fichier
+                  </button>
+                </div>
+              )}
+
+              <input ref={inputRef} type="file" accept=".xlsx" onChange={e => pickFile(e.target.files?.[0] ?? null)} className="hidden" />
+
+              {error && <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200">
+                <AlertCircle size={16} className="text-danger mt-0.5 shrink-0" />
+                <p className="text-sm text-danger">{error}</p>
+              </div>}
             </>
-          ) : (
-            <div className="space-y-3">
-              <div className="bg-canvas rounded-control px-3 py-2 text-xs text-muted break-all select-all">
-                {shareUrl}
+          )}
+
+          {step === 'preview' && preview && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-center">
+                  <p className="text-2xl font-bold text-emerald-700">{preview.validCount}</p>
+                  <p className="text-xs font-semibold text-emerald-600 mt-0.5">client{preview.validCount !== 1 ? 's' : ''} à importer</p>
+                </div>
+                <div className={`rounded-xl border p-4 text-center ${preview.errorCount > 0 ? 'bg-red-50 border-red-200' : 'bg-canvas border-line'}`}>
+                  <p className={`text-2xl font-bold ${preview.errorCount > 0 ? 'text-danger' : 'text-muted'}`}>{preview.errorCount}</p>
+                  <p className={`text-xs font-semibold mt-0.5 ${preview.errorCount > 0 ? 'text-danger' : 'text-muted'}`}>ligne{preview.errorCount !== 1 ? 's' : ''} en erreur</p>
+                </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button variant="secondary" onClick={copyLink} className="flex-1 text-sm min-h-[40px]">
-                  {copied ? <><Check size={16} /> Copié !</> : <><Copy size={16} /> Copier le lien</>}
-                </Button>
-                <a
-                  href={whatsappLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-control font-semibold text-sm bg-[#25D366] text-white hover:bg-[#1ebe5c] transition-colors"
-                >
-                  WhatsApp
-                </a>
+              {preview.validCount === 0 && (
+                <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-center space-y-1">
+                  <p className="text-sm font-bold text-danger">Aucune ligne importable</p>
+                  <p className="text-xs text-muted">Corrigez les erreurs dans votre fichier et recommencez.</p>
+                </div>
+              )}
+
+              <div className="overflow-x-auto rounded-xl border border-line">
+                <table className="w-full text-sm min-w-[400px]">
+                  <thead>
+                    <tr className="text-xs text-muted uppercase bg-canvas border-b border-line">
+                      <th className="px-3 py-2.5 text-left font-medium w-8">#</th>
+                      <th className="px-3 py-2.5 text-left font-medium">Nom</th>
+                      <th className="px-3 py-2.5 text-left font-medium">Téléphone</th>
+                      <th className="px-3 py-2.5 text-left font-medium">Statut / Erreur</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-line">
+                    {preview.rows.map((row: CustomerImportRow) => {
+                      const isErr = row.status === 'error';
+                      return (
+                        <tr key={row.rowNumber} className={isErr ? 'bg-red-50/70' : 'bg-emerald-50/30'}>
+                          <td className="px-3 py-2.5 text-xs text-muted">{row.rowNumber}</td>
+                          <td className="px-3 py-2.5 font-medium text-ink">{row.name || '—'}</td>
+                          <td className="px-3 py-2.5 text-muted text-xs">{row.phone || '—'}</td>
+                          <td className="px-3 py-2.5">
+                            {isErr ? (
+                              <div className="space-y-1">
+                                {row.errors.map((e, i) => (
+                                  <p key={i} className="text-xs text-danger flex items-start gap-1">
+                                    <AlertCircle size={11} className="mt-0.5 shrink-0" /> {e}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                                <CheckCircle2 size={11} /> Valide
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Button
-                  variant="ghost"
-                  onClick={handleShare}
-                  disabled={sharing}
-                  className="text-sm min-h-[36px] px-3 text-muted"
-                >
-                  {sharing ? <Loader2 size={14} className="animate-spin" /> : null}
-                  Régénérer le lien
+              {preview.validCount > 0 && (
+                <Button onClick={handleConfirm} disabled={loading} className="w-full">
+                  {loading ? <><Loader2 size={18} className="animate-spin" /> Importation en cours…</> : <><CheckCircle2 size={18} /> Importer les {pluriel(preview.validCount, 'client')} valide{preview.validCount !== 1 ? 's' : ''}</>}
                 </Button>
-                <Button
-                  variant="ghost"
-                  onClick={handleRevoke}
-                  disabled={revoking}
-                  className="text-sm min-h-[36px] px-3 text-red-500 hover:bg-red-50"
-                >
-                  {revoking
-                    ? <Loader2 size={14} className="animate-spin" />
-                    : <Trash2 size={14} />
-                  }
-                  Révoquer
-                </Button>
+              )}
+              {error && <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200">
+                <AlertCircle size={16} className="text-danger mt-0.5 shrink-0" /><p className="text-sm text-danger">{error}</p>
+              </div>}
+            </>
+          )}
+
+          {step === 'done' && (
+            <div className="py-8 text-center space-y-4">
+              <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mx-auto">
+                <CheckCircle2 size={40} className="text-emerald-600" />
               </div>
+              <div>
+                <p className="text-xl font-bold text-ink">{pluriel(imported, 'client')} importé{imported !== 1 ? 's' : ''} !</p>
+              </div>
+              <Button onClick={onClose} className="px-8">Fermer</Button>
             </div>
           )}
-
-          {shareErr && (
-            <p className="text-sm text-danger bg-red-50 rounded-control px-3 py-2">{shareErr}</p>
-          )}
         </div>
 
+        {(step === 'upload' || step === 'preview') && (
+          <div className="flex items-center justify-between px-5 py-3 border-t border-line shrink-0 bg-canvas rounded-b-2xl sm:rounded-b-card">
+            {step === 'preview' ? (
+              <button onClick={() => { setStep('upload'); setError(''); }} disabled={loading}
+                className="text-sm font-semibold text-muted hover:text-ink transition-colors disabled:opacity-40">← Changer de fichier</button>
+            ) : <span />}
+            <button onClick={onClose} disabled={loading}
+              className="text-sm font-semibold text-muted hover:text-ink transition-colors disabled:opacity-40">Annuler</button>
+          </div>
+        )}
       </div>
-    </Modal>
+    </div>
   );
 }
 
-// ─── Page principale ──────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
+
+type CustomerForm = { name: string; phone: string };
+const EMPTY_FORM: CustomerForm = { name: '', phone: '' };
 
 export default function ClientsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -247,12 +258,13 @@ export default function ClientsPage() {
   const [search,    setSearch]    = useState('');
 
   type ModalState = null | 'create' | Customer;
-  const [modal,   setModal]   = useState<ModalState>(null);
-  const [detail,  setDetail]  = useState<Customer | null>(null);
-  const [form,    setForm]    = useState<CustomerForm>(EMPTY_FORM);
-  const [saving,  setSaving]  = useState(false);
-  const [apiErr,  setApiErr]  = useState('');
-  const [nameErr, setNameErr] = useState('');
+  const [modal,     setModal]     = useState<ModalState>(null);
+  const [form,      setForm]      = useState<CustomerForm>(EMPTY_FORM);
+  const [saving,    setSaving]    = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [apiErr,    setApiErr]    = useState('');
+  const [nameErr,   setNameErr]   = useState('');
 
   const load = () => {
     setLoading(true);
@@ -267,14 +279,14 @@ export default function ClientsPage() {
     setModal('create');
   };
 
-  const openEdit = (c: Customer) => {
+  const openEdit = (c: Customer, e: React.MouseEvent) => {
+    e.preventDefault();
     setForm({ name: c.name, phone: c.phone ?? '' });
     setApiErr(''); setNameErr('');
     setModal(c);
-    setDetail(null);
   };
 
-  const closeModal = () => { setModal(null); };
+  const closeModal = () => setModal(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,7 +301,6 @@ export default function ClientsPage() {
       } else {
         const updated = await customersApi.update((modal as Customer).id, dto);
         setCustomers(prev => prev.map(c => c.id === updated.id ? updated : c));
-        if (detail?.id === updated.id) setDetail(updated);
       }
       closeModal();
     } catch (err) {
@@ -307,16 +318,21 @@ export default function ClientsPage() {
   );
 
   return (
-    <div className="py-6 md:py-8 space-y-5">
+    <div className="space-y-5">
 
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="font-display text-xl font-bold text-ink">Clients</h1>
-        <Button onClick={openCreate} className="shrink-0">
-          <Plus size={18} /> Ajouter
-        </Button>
-      </div>
+      <PageHeader title={<h1 className="font-display text-xl font-bold text-ink">Clients</h1>}>
+        <PageActions
+          primary={<Button onClick={openCreate}><Plus size={18} /> Ajouter</Button>}
+          secondary={[
+            { label: 'Importer', icon: <Upload size={14} />,   onClick: () => setImporting(true) },
+            {
+              label: 'Exporter', icon: <Download size={14} />, loading: exporting,
+              onClick: () => { setExporting(true); exportApi.customers().finally(() => setExporting(false)); },
+            },
+          ]}
+        />
+      </PageHeader>
 
-      {/* Recherche */}
       <Input
         label=""
         placeholder="Rechercher un client…"
@@ -324,7 +340,6 @@ export default function ClientsPage() {
         onChange={e => setSearch(e.target.value)}
       />
 
-      {/* Liste */}
       {loading ? (
         <p className="text-sm text-muted py-8 text-center">Chargement…</p>
       ) : filtered.length === 0 ? (
@@ -338,31 +353,33 @@ export default function ClientsPage() {
       ) : (
         <div className="space-y-2">
           {filtered.map(c => (
-            <button
+            <div
               key={c.id}
-              onClick={() => setDetail(c)}
-              className="w-full bg-surface rounded-card shadow-card px-4 py-3 flex items-center justify-between gap-4 text-left hover:shadow-md transition-shadow"
+              className="w-full bg-surface rounded-card shadow-card flex items-center hover:shadow-md transition-shadow"
             >
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-ink truncate">{c.name}</p>
-                {c.phone && (
-                  <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
-                    <Phone size={12} /> {c.phone}
-                  </p>
-                )}
-              </div>
-              <Share2 size={16} className="text-muted shrink-0" />
-            </button>
+              <Link
+                to={`/clients/${c.id}`}
+                className="flex-1 flex items-center gap-3 px-4 py-3 min-w-0"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-ink truncate">{c.name}</p>
+                  {c.phone && (
+                    <p className="text-xs text-muted mt-0.5 flex items-center gap-1">
+                      <Phone size={12} /> {c.phone}
+                    </p>
+                  )}
+                </div>
+                <ChevronRight size={16} className="text-muted shrink-0" />
+              </Link>
+            </div>
           ))}
         </div>
       )}
 
-      {/* Panneau de détail */}
-      {detail && (
-        <DetailPanel
-          customer={detail}
-          onClose={() => setDetail(null)}
-          onEdit={() => openEdit(detail)}
+      {importing && (
+        <CustomerImportModal
+          onClose={() => setImporting(false)}
+          onImported={() => { setImporting(false); load(); }}
         />
       )}
 

@@ -6,6 +6,7 @@ import { extractApiError } from '../lib/apiError';
 import type { Employee, CreateEmployeeDto, UpdateEmployeeDto } from '../types/employee';
 import type { Boutique } from '../types/boutique';
 import Button from '../components/ui/Button';
+import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 
@@ -484,10 +485,10 @@ export default function EmployesPage() {
   const inactive = employees.filter(e => !e.active);
 
   return (
-    <div className="py-6 md:py-8 space-y-5">
+    <div className="space-y-5">
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-4">
+      <PageHeader title={
         <div>
           <h1 className="font-display text-xl font-bold text-ink">Employés</h1>
           {!loading && employees.length > 0 && (
@@ -497,10 +498,9 @@ export default function EmployesPage() {
             </p>
           )}
         </div>
-        <Button onClick={() => setShowCreate(true)} className="shrink-0">
-          <Plus size={18} /> Nouvel employé
-        </Button>
-      </div>
+      }>
+        <Button onClick={() => setShowCreate(true)}><Plus size={18} /> Nouvel employé</Button>
+      </PageHeader>
 
       {/* Content */}
       {loading ? (

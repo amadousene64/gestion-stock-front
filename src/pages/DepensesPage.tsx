@@ -5,6 +5,7 @@ import { useBoutique } from '../contexts/BoutiqueContext';
 import { extractApiError } from '../lib/apiError';
 import type { Expense } from '../types/expense';
 import Button from '../components/ui/Button';
+import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 
@@ -268,15 +269,12 @@ export default function DepensesPage() {
 
   /* ── Render ─────────────────────────────────────────── */
   return (
-    <div className="py-6 md:py-8 space-y-5">
+    <div className="space-y-5">
 
       {/* ── Header ──────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="font-display text-xl font-bold text-ink">Dépenses</h1>
-        <Button onClick={() => setShowCreate(true)} className="shrink-0">
-          <Plus size={18} /> Enregistrer
-        </Button>
-      </div>
+      <PageHeader title={<h1 className="font-display text-xl font-bold text-ink">Dépenses</h1>}>
+        <Button onClick={() => setShowCreate(true)}><Plus size={18} /> Enregistrer</Button>
+      </PageHeader>
 
       {/* ── Filters ─────────────────────────────────────── */}
       <div className="space-y-3">

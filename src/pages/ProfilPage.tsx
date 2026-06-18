@@ -105,7 +105,7 @@ export default function ProfilPage() {
   /* ── États de chargement / erreur ─────────────────────── */
   if (loading && !profile) {
     return (
-      <div className="py-6 md:py-8">
+      <div>
         <h1 className="font-display text-2xl font-bold text-ink mb-6">Mon profil</h1>
         <p className="text-sm text-muted">Chargement…</p>
       </div>
@@ -114,7 +114,7 @@ export default function ProfilPage() {
 
   if (!profile) {
     return (
-      <div className="py-6 md:py-8">
+      <div>
         <h1 className="font-display text-2xl font-bold text-ink mb-4">Mon profil</h1>
         <p className="text-sm text-danger bg-red-50 rounded-card px-4 py-3">
           Impossible de charger le profil. Vérifiez votre connexion et rechargez la page.
@@ -124,7 +124,7 @@ export default function ProfilPage() {
   }
 
   return (
-    <div className="py-6 md:py-8 space-y-6">
+    <div className="space-y-6">
 
       <h1 className="font-display text-2xl font-bold text-ink">Mon profil</h1>
 

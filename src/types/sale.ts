@@ -4,6 +4,7 @@ export interface CreateSaleDto {
   customerId?: string;
   kind: 'retail' | 'wholesale';
   credit: boolean;
+  paymentMethod?: 'cash' | 'orange_money' | 'wave';
   items: SaleItemDto[];
 }
 
@@ -22,7 +23,7 @@ export interface SaleItemDetail {
   lineTotal: number;
 }
 
-export interface SaleDetail {
+export interface SaleSummary {
   id: string;
   storeId: string;
   storeName: string;
@@ -34,7 +35,11 @@ export interface SaleDetail {
   total: number;
   credit: boolean;
   createdAt: string;
+}
+
+export interface SaleDetail extends SaleSummary {
   items: SaleItemDetail[];
+  paymentMethod?: 'cash' | 'orange_money' | 'wave' | null;
 }
 
 export interface CartItem {

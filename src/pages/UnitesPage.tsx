@@ -4,6 +4,7 @@ import { unitsApi } from '../services/catalogueApi';
 import type { Unit, UnitDto } from '../types/catalogue';
 import { extractApiError } from '../lib/apiError';
 import Button from '../components/ui/Button';
+import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
@@ -64,14 +65,11 @@ export default function UnitesPage() {
   const isEditing = modal !== null && modal !== 'create';
 
   return (
-    <div className="py-6 md:py-8 space-y-5">
+    <div className="space-y-5">
 
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="font-display text-xl font-bold text-ink">Unités de mesure</h2>
-        <Button onClick={openCreate} className="shrink-0">
-          <Plus size={18} /> Ajouter
-        </Button>
-      </div>
+      <PageHeader title={<h2 className="font-display text-xl font-bold text-ink">Unités de mesure</h2>}>
+        <Button onClick={openCreate}><Plus size={18} /> Ajouter</Button>
+      </PageHeader>
 
       {loading ? (
         <p className="text-sm text-muted py-8 text-center">Chargement…</p>

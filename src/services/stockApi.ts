@@ -50,8 +50,10 @@ export interface TransferDto {
 }
 
 export const stockApi = {
-  getPositions:  ()                          => api.get<StockPosition[]>('/api/stock').then(r => r.data),
-  getMovements:  ()                          => api.get<StockMovement[]>('/api/stock/movements').then(r => r.data),
+  getPositions:  (storeId?: string | null)   =>
+    api.get<StockPosition[]>('/api/stock', { params: storeId ? { storeId } : {} }).then(r => r.data),
+  getMovements:  (storeId?: string | null)   =>
+    api.get<StockMovement[]>('/api/stock/movements', { params: storeId ? { storeId } : {} }).then(r => r.data),
   getMovementsByProduct: (productId: string) =>
     api.get<StockMovement[]>(`/api/stock/movements/product/${productId}`).then(r => r.data),
 

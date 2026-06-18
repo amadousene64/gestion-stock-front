@@ -9,6 +9,11 @@ export interface PortalLinkResponse {
   url: string;
 }
 
+export interface CustomerDetail extends Customer {
+  balance: number;
+  hasPortalLink: boolean;
+}
+
 export interface LedgerEntry {
   id: string;
   customerId: string;
@@ -18,6 +23,8 @@ export interface LedgerEntry {
   referenceId: string | null;
   createdById: string | null;
   createdAt: string;
+  receiptNumber?: string | null;
+  paymentMethod?: string | null;
 }
 
 export interface InvoiceSummary {

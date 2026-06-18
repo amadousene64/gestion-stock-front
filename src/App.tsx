@@ -14,6 +14,7 @@ import ProduitsList from './pages/ProduitsList';
 import CategoriesPage from './pages/CategoriesPage';
 import UnitesPage from './pages/UnitesPage';
 import ClientsPage from './pages/ClientsPage';
+import ClientDetailPage from './pages/ClientDetailPage';
 import StockPage from './pages/StockPage';
 import BoutiquesPage from './pages/BoutiquesPage';
 import EmployesPage from './pages/EmployesPage';
@@ -21,6 +22,8 @@ import DepensesPage from './pages/DepensesPage';
 import ProfilPage from './pages/ProfilPage';
 import ParametresCommercePage from './pages/ParametresCommercePage';
 import FacturesPage from './pages/FacturesPage';
+import VentesPage from './pages/VentesPage';
+import StatistiquesPage from './pages/StatistiquesPage';
 import PortailClientPage from './pages/PortailClientPage';
 
 export default function App() {
@@ -46,12 +49,15 @@ export default function App() {
                     </Route>
 
                     <Route path="/clients"             element={<ClientsPage />} />
+                    <Route path="/clients/:id"        element={<ClientDetailPage />} />
                     <Route path="/stock"               element={<StockPage />} />
                     <Route path="/boutiques"           element={<BoutiquesPage />} />
                     <Route path="/employes"            element={<EmployesPage />} />
                     <Route path="/depenses"            element={<DepensesPage />} />
                     <Route path="/profil"              element={<ProfilPage />} />
                     <Route path="/factures"            element={<FacturesPage />} />
+                    <Route path="/ventes"              element={<VentesPage />} />
+                    <Route path="/statistiques"        element={<StatistiquesPage />} />
                     <Route path="/parametres-commerce" element={<ParametresCommercePage />} />
                   </Route>
                 </Route>

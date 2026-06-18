@@ -104,7 +104,7 @@ export default function ParametresCommercePage() {
     : null);
 
   return (
-    <div className="py-6 md:py-8 space-y-6">
+    <div className="space-y-6">
 
       <h1 className="font-display text-2xl font-bold text-ink">Paramètres du commerce</h1>
 

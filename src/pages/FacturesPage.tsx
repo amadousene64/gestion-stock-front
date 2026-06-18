@@ -21,6 +21,7 @@ import type { Customer } from '../types/customer';
 import type { Location } from '../types/location';
 import type { Boutique } from '../types/boutique';
 import Button from '../components/ui/Button';
+import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 
@@ -111,6 +112,7 @@ function InvoiceDetailModal({ invoiceId, onClose, onCancelled }: InvoiceDetailMo
   const [cancelling, setCancelling] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [err,       setErr]       = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   useEffect(() => {
     invoicesApi.get(invoiceId)
@@ -130,17 +132,20 @@ function InvoiceDetailModal({ invoiceId, onClose, onCancelled }: InvoiceDetailMo
   };
 
   const handleCancel = async () => {
-    if (!detail || !confirm(`Annuler la facture ${detail.number} ?`)) return;
+    if (!detail) return;
     setCancelling(true);
+    setErr('');
     try {
       const updated = await invoicesApi.cancel(invoiceId);
       setDetail(updated);
       onCancelled(updated);
+      setShowCancelConfirm(false);
     } catch (e) { setErr(extractApiError(e)); }
     finally { setCancelling(false); }
   };
 
   return (
+    <>
     <Modal title="Détail de la facture" onClose={onClose}>
       {loading && (
         <div className="flex justify-center py-8">
@@ -218,20 +223,54 @@ function InvoiceDetailModal({ invoiceId, onClose, onCancelled }: InvoiceDetailMo
             {detail.status === 'issued' && (
               <Button
                 variant="secondary"
-                onClick={handleCancel}
+                onClick={() => setShowCancelConfirm(true)}
                 disabled={cancelling}
                 className="flex-1 min-w-[120px] text-danger border-danger/30 hover:bg-red-50"
               >
-                {cancelling
-                  ? <><Loader2 size={16} className="animate-spin" /> Annulation…</>
-                  : <><X size={16} /> Annuler</>
-                }
+                <X size={16} /> Annuler
               </Button>
             )}
           </div>
         </div>
       )}
     </Modal>
+
+    {showCancelConfirm && detail && (
+      <Modal title={`Annuler la facture ${detail.number} ?`} onClose={() => setShowCancelConfirm(false)}>
+        <div className="space-y-4">
+          <div className="flex gap-3 bg-red-50 border border-red-200 rounded-control px-3 py-3 text-sm text-red-800">
+            <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-500" />
+            <span>
+              La vente associée sera annulée, le stock réajusté et toute dette client correspondante annulée. Cette action est <strong>irréversible</strong>.
+            </span>
+          </div>
+          {err && (
+            <p className="text-sm text-danger bg-red-50 rounded-control px-3 py-2">{err}</p>
+          )}
+          <div className="flex gap-3 pt-1">
+            <Button
+              variant="secondary"
+              onClick={() => setShowCancelConfirm(false)}
+              disabled={cancelling}
+              className="flex-1"
+            >
+              <X size={16} /> Retour
+            </Button>
+            <button
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="flex-1 inline-flex items-center justify-center gap-2 min-h-[48px] px-4 rounded-control bg-red-600 text-white font-semibold text-sm hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {cancelling
+                ? <><Loader2 size={16} className="animate-spin" /> Annulation…</>
+                : <><Trash2 size={16} /> Confirmer l'annulation</>
+              }
+            </button>
+          </div>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }
 
@@ -462,7 +501,17 @@ function ProformaDetailModal({ proformaId, onClose, onUpdated, onEditRequest }: 
 
           {/* Actions principales */}
           <div className="flex flex-wrap gap-3 pt-1">
+            {canConvert && (
+              <Button
+                onClick={() => setShowConvert(true)}
+                className="flex-1 min-w-[160px]"
+              >
+                <RefreshCw size={16} /> Convertir en vente
+              </Button>
+            )}
+
             <Button
+              variant="secondary"
               onClick={handlePdf}
               disabled={pdfLoading}
               className="flex-1 min-w-[140px]"
@@ -480,15 +529,6 @@ function ProformaDetailModal({ proformaId, onClose, onUpdated, onEditRequest }: 
                 className="flex-1 min-w-[100px]"
               >
                 Modifier
-              </Button>
-            )}
-
-            {canConvert && (
-              <Button
-                onClick={() => setShowConvert(true)}
-                className="flex-1 min-w-[160px] bg-green-600 hover:bg-green-700"
-              >
-                <RefreshCw size={16} /> Convertir en vente
               </Button>
             )}
           </div>
@@ -1027,17 +1067,16 @@ export default function FacturesPage() {
 
   /* ── Render ──────────────────────────────────────────── */
   return (
-    <div className="py-6 md:py-8 space-y-5">
+    <div className="space-y-5">
 
       {/* Page header */}
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="font-display text-xl font-bold text-ink">Factures & Pro-formas</h1>
+      <PageHeader title={<h1 className="font-display text-xl font-bold text-ink">Factures & Pro-formas</h1>}>
         {tab === 'proformas' && (
-          <Button onClick={() => setCreateModal(true)} className="shrink-0">
+          <Button onClick={() => setCreateModal(true)}>
             <Plus size={18} /> Nouvelle pro-forma
           </Button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Tabs */}
       <div className="flex gap-1 bg-canvas rounded-control p-1 w-fit">
