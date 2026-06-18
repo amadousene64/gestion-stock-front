@@ -176,8 +176,8 @@ function DebtorTooltip({ active, payload }: { active?: boolean; payload?: { payl
 
 // ─── Étiquette camembert ──────────────────────────────────────────────────────
 
-function PieLabel({ cx, cy, midAngle, innerRadius, outerRadius, pct }: {
-  cx: number; cy: number; midAngle: number;
+function PieLabel({ cx, cy, midAngle = 0, innerRadius, outerRadius, pct }: {
+  cx: number; cy: number; midAngle?: number;
   innerRadius: number; outerRadius: number; pct: number;
 }) {
   if (pct < 5) return null;

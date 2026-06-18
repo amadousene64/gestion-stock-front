@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, X, Check, Loader2, Phone, ChevronRight, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, X, Check, Loader2, Phone, ChevronRight, Pencil, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { exportApi } from '../services/exportApi';
 import { importApi } from '../services/importApi';
 import type { CustomerImportPreview, CustomerImportRow } from '../services/importApi';
@@ -371,6 +371,14 @@ export default function ClientsPage() {
                 </div>
                 <ChevronRight size={16} className="text-muted shrink-0" />
               </Link>
+              <button
+                type="button"
+                onClick={e => openEdit(c, e)}
+                className="shrink-0 px-3 py-3 text-muted hover:text-brand-500 hover:bg-brand-50 transition-colors rounded-r-card"
+                title="Modifier"
+              >
+                <Pencil size={15} />
+              </button>
             </div>
           ))}
         </div>
