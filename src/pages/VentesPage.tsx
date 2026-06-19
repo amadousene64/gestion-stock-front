@@ -269,7 +269,7 @@ export default function VentesPage() {
       <div className="bg-surface border border-line rounded-card p-4 mb-4 space-y-3">
 
         {/* Date range */}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
             <label className="text-xs text-muted mb-1 block">Du</label>
             <input type="date" value={filters.dateFrom}

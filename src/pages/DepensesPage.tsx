@@ -298,26 +298,30 @@ export default function DepensesPage() {
 
         {/* Custom date range */}
         {period === 'custom' && (
-          <div className="flex gap-2 items-center flex-wrap">
-            <div className="flex items-center gap-1.5 flex-1 min-w-[140px]">
-              <Calendar size={15} className="text-muted shrink-0" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label className="text-xs text-muted mb-1 flex items-center gap-1.5">
+                <Calendar size={13} className="text-muted shrink-0" /> Du
+              </label>
               <input
                 type="date"
                 value={customFrom}
                 max={customTo}
                 onChange={e => setCustomFrom(e.target.value)}
-                className="min-h-[40px] flex-1 rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-500"
+                className="w-full min-h-[40px] rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
-            <span className="text-muted text-sm shrink-0">→</span>
-            <input
-              type="date"
-              value={customTo}
-              min={customFrom}
-              max={toIso(today())}
-              onChange={e => setCustomTo(e.target.value)}
-              className="min-h-[40px] flex-1 min-w-[140px] rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
+            <div>
+              <label className="text-xs text-muted mb-1 block">Au</label>
+              <input
+                type="date"
+                value={customTo}
+                min={customFrom}
+                max={toIso(today())}
+                onChange={e => setCustomTo(e.target.value)}
+                className="w-full min-h-[40px] rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+            </div>
           </div>
         )}
 
