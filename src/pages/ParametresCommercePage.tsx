@@ -88,7 +88,7 @@ export default function ParametresCommercePage() {
     setLogoErr(''); setLogoOk(false); setLogoSaving(true);
     try {
       const updated = await tenantApi.uploadLogo(logoFile);
-      updateTenant({ logoUrl: updated.logoUrl });
+      updateTenant({ logoDataUri: updated.logoDataUri });
       setLogoOk(true);
       cancelPreview();
     } catch (err) {
@@ -99,9 +99,7 @@ export default function ParametresCommercePage() {
   };
 
   /* ── Rendu ────────────────────────────────────────────── */
-  const logoSrc = preview ?? (tenant?.logoUrl
-    ? `${import.meta.env.VITE_API_URL}${tenant.logoUrl}`
-    : null);
+  const logoSrc = preview ?? tenant?.logoDataUri ?? null;
 
   return (
     <div className="space-y-6">
@@ -152,7 +150,7 @@ export default function ParametresCommercePage() {
                 className="min-h-[40px] px-4 text-sm"
               >
                 <Upload size={16} />
-                {tenant?.logoUrl ? 'Changer le logo' : 'Ajouter un logo'}
+                {tenant?.logoDataUri ? 'Changer le logo' : 'Ajouter un logo'}
               </Button>
             ) : (
               <div className="flex flex-wrap items-center gap-2">

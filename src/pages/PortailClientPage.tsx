@@ -289,7 +289,7 @@ export default function PortailClientPage() {
     );
   }
 
-  const { customerName, phone, balance, ledger, invoices } = data;
+  const { tenantName, logoDataUri, customerName, phone, balance, ledger, invoices } = data;
   const isPositive   = balance >= 0;
   const balanceLabel = isPositive
     ? `Avoir : ${formatFCFA(balance)}`
@@ -300,8 +300,12 @@ export default function PortailClientPage() {
   return (
     <div className="min-h-screen bg-canvas pb-12">
 
-      <header className="bg-surface border-b border-line px-4 py-3 text-center">
-        <p className="text-xs text-muted uppercase tracking-widest">Espace client</p>
+      <header className="bg-surface border-b border-line px-4 py-4 text-center">
+        {logoDataUri && (
+          <img src={logoDataUri} alt="Logo" className="h-10 mx-auto mb-2 object-contain" />
+        )}
+        <p className="text-sm font-semibold text-ink">{tenantName}</p>
+        <p className="text-xs text-muted uppercase tracking-widest mt-0.5">Espace client</p>
       </header>
 
       <div className="max-w-lg mx-auto px-4 pt-8 space-y-6">

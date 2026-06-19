@@ -24,9 +24,7 @@ function fmtDatetime(iso: string) {
 
 function buildPrintHtml(sale: SaleDetail, tenant: Tenant | null): string {
   const currency = tenant?.currency ?? 'FCFA';
-  const logoUrl = tenant?.logoUrl
-    ? `${import.meta.env.VITE_API_URL ?? ''}${tenant.logoUrl}`
-    : '';
+  const logoUrl = tenant?.logoDataUri ?? '';
 
   const rows = sale.items.map(item => `
     <tr>

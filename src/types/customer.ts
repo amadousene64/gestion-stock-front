@@ -41,6 +41,8 @@ export interface InvoiceSummary {
 }
 
 export interface PortalData {
+  tenantName: string;
+  logoDataUri: string | null;
   customerName: string;
   phone: string | null;
   balance: number;
