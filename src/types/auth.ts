@@ -14,7 +14,7 @@ export interface RegisterDto {
 export interface AuthResponse {
   token: string;
   userId: string;
-  tenantId: string;
+  tenantId: string | null;
   role: string;
   fullName: string;
   email?: string;
@@ -23,9 +23,13 @@ export interface AuthResponse {
 
 export interface AuthUser {
   userId: string;
-  tenantId: string;
+  tenantId: string | null;
   role: string;
   fullName?: string;
   email?: string;
   phone?: string;
+}
+
+export function isSuperAdmin(user: AuthUser | null): boolean {
+  return user?.role === 'super_admin';
 }

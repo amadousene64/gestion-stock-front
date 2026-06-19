@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { userApi } from '../services/userApi';
 import type { UserProfile } from '../services/userApi';
 import { useAuth } from './AuthContext';
+import { isSuperAdmin } from '../types/auth';
 
 interface UserProfileContextValue {
   profile: UserProfile | null;
@@ -20,7 +21,7 @@ export function UserProfileProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(() => {
-    if (!user) {
+    if (!user || isSuperAdmin(user)) {
       setProfile(null);
       return;
     }

@@ -4,7 +4,11 @@ import { TenantProvider } from './contexts/TenantContext';
 import { UserProfileProvider } from './contexts/UserProfileContext';
 import { BoutiqueProvider } from './contexts/BoutiqueContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './components/AdminRoute';
 import AppLayout from './layout/AppLayout';
+import AdminLayout from './layout/AdminLayout';
+import AdminTenantsPage from './pages/admin/AdminTenantsPage';
+import AdminTenantDetailPage from './pages/admin/AdminTenantDetailPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -63,6 +67,14 @@ export default function App() {
                 </Route>
 
                 <Route path="/portail/:token" element={<PortailClientPage />} />
+
+                {/* Interface super-admin — séparée et étanche */}
+                <Route element={<AdminRoute />}>
+                  <Route element={<AdminLayout />}>
+                    <Route path="/admin" element={<AdminTenantsPage />} />
+                    <Route path="/admin/tenants/:id" element={<AdminTenantDetailPage />} />
+                  </Route>
+                </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>

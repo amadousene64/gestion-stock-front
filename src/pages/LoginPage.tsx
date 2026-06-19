@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../contexts/AuthContext';
 import type { LoginDto, AuthResponse } from '../types/auth';
+import { isSuperAdmin } from '../types/auth';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
@@ -20,15 +21,16 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const { data } = await api.post<AuthResponse>('/api/auth/login', form);
-      login(data.token, {
+      const authUser = {
         userId:   data.userId,
         tenantId: data.tenantId,
         role:     data.role,
         fullName: data.fullName,
         email:    data.email,
         phone:    data.phone,
-      });
-      navigate('/', { replace: true });
+      };
+      login(data.token, authUser);
+      navigate(isSuperAdmin(authUser) ? '/admin' : '/', { replace: true });
     } catch (err: unknown) {
       const msg =
         err instanceof Error && 'response' in err

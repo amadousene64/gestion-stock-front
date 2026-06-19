@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import type { ReactNode } from 'react';
 import { tenantApi } from '../services/tenantApi';
 import { useAuth } from './AuthContext';
+import { isSuperAdmin } from '../types/auth';
 import type { Tenant } from '../types/tenant';
 
 interface TenantContextValue {
@@ -37,7 +38,7 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   };
 
   const load = useCallback(() => {
-    if (!user) {
+    if (!user || isSuperAdmin(user)) {
       setTenant(null);
       localStorage.removeItem(STORAGE_KEY);
       return;

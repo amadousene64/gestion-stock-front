@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback } from 'rea
 import type { ReactNode } from 'react';
 import { boutiquesApi } from '../services/boutiquesApi';
 import { useAuth } from './AuthContext';
+import { isSuperAdmin } from '../types/auth';
 import type { Boutique } from '../types/boutique';
 
 interface BoutiqueContextValue {
@@ -32,7 +33,7 @@ export function BoutiqueProvider({ children }: { children: ReactNode }) {
   });
 
   const load = useCallback(() => {
-    if (!user) return;
+    if (!user || isSuperAdmin(user)) return;
     setLoading(true);
     boutiquesApi
       .list()
