@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, Clock, Star, AlertTriangle, XCircle, Infinity, ArrowRight } from 'lucide-react';
 import { api } from '../lib/api';
@@ -264,7 +265,7 @@ export default function MonAbonnementPage() {
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4">
       <span className="text-xs text-muted shrink-0">{label}</span>

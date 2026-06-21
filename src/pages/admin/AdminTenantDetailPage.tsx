@@ -215,7 +215,7 @@ export default function AdminTenantDetailPage() {
               min={1}
               max={24}
               required
-              value={form.durationMonths}
+              value={form.durationMonths ?? ''}
               onChange={e => handleFormChange('durationMonths', Number(e.target.value))}
             />
             )}
