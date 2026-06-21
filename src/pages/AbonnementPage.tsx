@@ -16,29 +16,30 @@ const CONTACT = {
 type BillingPeriod = 'monthly' | 'annual';
 
 interface FeatureRow {
-  label: string;
-  free:  boolean;
-  pro:   boolean;
+  label:    string;
+  free:     boolean;
+  pro:      boolean;
+  business: boolean;
 }
 
 const FEATURE_ROWS: FeatureRow[] = [
-  { label: 'Caisse & enregistrement des ventes', free: true,  pro: true  },
-  { label: 'Gestion des clients',                free: true,  pro: true  },
-  { label: 'Gestion du stock',                   free: true,  pro: true  },
-  { label: 'Suivi des dépenses',                 free: true,  pro: true  },
-  { label: 'Boutiques & utilisateurs illimités', free: false, pro: true  },
-  { label: 'Produits & ventes illimités',        free: false, pro: true  },
-  { label: 'Factures PDF professionnelles',      free: false, pro: true  },
-  { label: 'Pro-formas & devis',                 free: false, pro: true  },
-  { label: 'Espace client en ligne',             free: false, pro: true  },
-  { label: 'Gestion des employés',               free: false, pro: true  },
-  { label: 'Statistiques avancées',              free: false, pro: true  },
-  { label: 'Export des données (Excel/CSV)',     free: false, pro: true  },
+  { label: 'Caisse & enregistrement des ventes', free: true,  pro: true,  business: true  },
+  { label: 'Gestion des clients',                free: true,  pro: true,  business: true  },
+  { label: 'Gestion du stock',                   free: true,  pro: true,  business: true  },
+  { label: 'Suivi des dépenses',                 free: true,  pro: true,  business: true  },
+  { label: 'Factures PDF professionnelles',      free: false, pro: true,  business: true  },
+  { label: 'Pro-formas & devis',                 free: false, pro: true,  business: true  },
+  { label: 'Espace client en ligne',             free: false, pro: true,  business: true  },
+  { label: 'Gestion des employés',               free: false, pro: true,  business: true  },
+  { label: 'Statistiques avancées',              free: false, pro: true,  business: true  },
+  { label: 'Export des données (Excel/CSV)',     free: false, pro: true,  business: true  },
+  { label: 'Boutiques & utilisateurs illimités', free: false, pro: false, business: true  },
+  { label: 'Produits & ventes illimités',        free: false, pro: false, business: true  },
 ];
 
 function fmtFCFA(n: number | null | undefined): string {
   if (n == null) return '—';
-  return new Intl.NumberFormat('fr-FR').format(n) + ' FCFA';
+  return new Intl.NumberFormat('fr-FR').format(n) + ' FCFA';
 }
 
 function fmtDate(iso: string | null | undefined): string {
@@ -49,32 +50,38 @@ function fmtDate(iso: string | null | undefined): string {
 }
 
 export default function AbonnementPage() {
-  const sub           = useSubscription();
-  const { tenant }    = useTenant();
+  const sub        = useSubscription();
+  const { tenant } = useTenant();
   const [billing, setBilling] = useState<BillingPeriod>('monthly');
 
-  const { monthlyFcfa, annualFcfa } = sub.limits;
+  const { monthlyFcfa, annualFcfa, businessMonthlyFcfa, businessAnnualFcfa } = sub.limits;
 
-  const isOnFreeTier   = sub.tier === 'free';
-  const isOnProTier    = sub.tier !== 'free' && sub.tier !== 'trial';
-  const isLifetimePro  = sub.billingCycle === 'lifetime';
+  const isOnFreeTier     = sub.tier === 'free';
+  const isOnProTier      = sub.tier === 'pro';
+  const isOnBusinessTier = sub.tier === 'business' || sub.tier === 'paid';
+  const isLifetime       = sub.billingCycle === 'lifetime';
 
-  const savings = monthlyFcfa && annualFcfa
+  const proSavings = monthlyFcfa && annualFcfa
     ? Math.round((1 - annualFcfa / (monthlyFcfa * 12)) * 100)
     : null;
 
   const commerceName = tenant?.name ?? 'mon commerce';
   const waContact    = CONTACT.WHATSAPP.replace(/\D/g, '');
-  const waMsg = billing === 'monthly'
-    ? encodeURIComponent(
-        `Bonjour, je souhaite souscrire à la formule Pro Mensuelle` +
-        ` (${fmtFCFA(monthlyFcfa)}/mois). Commerce : ${commerceName}`
-      )
-    : encodeURIComponent(
-        `Bonjour, je souhaite souscrire à la formule Pro Annuelle` +
-        ` (${fmtFCFA(annualFcfa)}/an). Commerce : ${commerceName}`
-      );
-  const waUrl = `https://wa.me/${waContact}?text=${waMsg}`;
+
+  const proPrice = billing === 'monthly' ? monthlyFcfa : annualFcfa;
+  const bizPrice = billing === 'monthly' ? businessMonthlyFcfa : businessAnnualFcfa;
+
+  const waMsgPro = encodeURIComponent(
+    `Bonjour, je souhaite souscrire à la formule Pro ${billing === 'monthly' ? 'Mensuelle' : 'Annuelle'}` +
+    ` (${fmtFCFA(proPrice)}/${billing === 'monthly' ? 'mois' : 'an'}). Commerce : ${commerceName}`
+  );
+  const waMsgBiz = encodeURIComponent(
+    `Bonjour, je souhaite souscrire à la formule Business ${billing === 'monthly' ? 'Mensuelle' : 'Annuelle'}` +
+    ` (${fmtFCFA(bizPrice)}/${billing === 'monthly' ? 'mois' : 'an'}). Commerce : ${commerceName}`
+  );
+
+  const waUrlPro = `https://wa.me/${waContact}?text=${waMsgPro}`;
+  const waUrlBiz = `https://wa.me/${waContact}?text=${waMsgBiz}`;
 
   return (
     <div className="space-y-8">
@@ -83,20 +90,20 @@ export default function AbonnementPage() {
       <div>
         <h1 className="font-display text-xl font-semibold text-ink">Offres & tarifs</h1>
         <p className="text-sm text-muted mt-1">
-          {sub.status === 'trial'   && 'Votre essai est en cours. Passez à Pro pour conserver tous vos accès.'}
+          {sub.status === 'trial'   && 'Votre essai est en cours. Passez à Pro ou Business pour conserver tous vos accès.'}
           {sub.status === 'free'    && 'Débloquez toutes les fonctionnalités pour développer votre activité.'}
           {sub.status === 'grace'   && 'Votre abonnement a expiré. Renouvelez pour continuer sans interruption.'}
           {sub.status === 'expired' && "Accès bloqué. Renouvelez maintenant pour reprendre l'activité."}
           {sub.status === 'active'  && (
-            isLifetimePro
+            isLifetime
               ? 'Abonnement à vie — aucune expiration.'
-              : `Abonnement Pro actif · expire le ${fmtDate(sub.expiresAt)}.`
+              : `Abonnement actif · expire le ${fmtDate(sub.expiresAt)}.`
           )}
         </p>
       </div>
 
       {/* ── Toggle mensuel / annuel ───────────────────────────────────────── */}
-      {!isLifetimePro && (
+      {!isLifetime && (
         <div
           className="flex items-center gap-1 bg-canvas border border-line rounded-control p-1 w-fit"
           role="group"
@@ -121,9 +128,9 @@ export default function AbonnementPage() {
             }`}
           >
             Annuel
-            {savings != null && (
+            {proSavings != null && (
               <span className="text-[10px] font-bold bg-success text-white px-1.5 py-0.5 rounded-full leading-none">
-                −{savings} %
+                −{proSavings} %
               </span>
             )}
           </button>
@@ -131,7 +138,7 @@ export default function AbonnementPage() {
       )}
 
       {/* ── Comparatif des formules ───────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
 
         {/* Plan Gratuit */}
         <Card className={`p-5 flex flex-col border-2 ${isOnFreeTier ? 'border-brand-500' : 'border-line'}`}>
@@ -143,7 +150,7 @@ export default function AbonnementPage() {
           <p className="font-display text-2xl font-bold text-ink">0&nbsp;FCFA</p>
           <p className="text-xs text-muted mb-1">pour toujours</p>
           <p className="text-xs text-muted mb-5">
-            1 boutique · 1 utilisateur · 50 produits · 300 ventes/mois
+            1 boutique · 1 utilisateur · 20 produits · 100 ventes/mois
           </p>
 
           <ul className="space-y-2">
@@ -163,10 +170,12 @@ export default function AbonnementPage() {
         </Card>
 
         {/* Plan Pro */}
-        <Card className="p-5 flex flex-col border-2 border-brand-500 relative overflow-hidden">
-          {!isOnProTier && (
+        <Card className={`p-5 flex flex-col border-2 relative overflow-hidden ${
+          isOnProTier ? 'border-brand-500' : 'border-brand-500'
+        }`}>
+          {!isOnProTier && !isOnBusinessTier && (
             <span className="absolute top-3 right-3 bg-brand-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide">
-              Recommandé
+              Populaire
             </span>
           )}
 
@@ -175,22 +184,18 @@ export default function AbonnementPage() {
             {isOnProTier && <CurrentBadge />}
           </div>
 
-          {billing === 'monthly' || isLifetimePro ? (
+          {isLifetime ? (
             <>
-              {isLifetimePro ? (
-                <>
-                  <p className="font-display text-2xl font-bold text-ink">À vie</p>
-                  <p className="text-xs text-muted mb-5">aucune expiration</p>
-                </>
-              ) : (
-                <>
-                  <p className="font-display text-2xl font-bold text-ink">
-                    {fmtFCFA(monthlyFcfa)}
-                    <span className="text-sm font-normal text-muted">/mois</span>
-                  </p>
-                  <p className="text-xs text-muted mb-5">facturé mensuellement</p>
-                </>
-              )}
+              <p className="font-display text-2xl font-bold text-ink">À vie</p>
+              <p className="text-xs text-muted mb-5">aucune expiration</p>
+            </>
+          ) : billing === 'monthly' ? (
+            <>
+              <p className="font-display text-2xl font-bold text-ink">
+                {fmtFCFA(monthlyFcfa)}
+                <span className="text-sm font-normal text-muted">/mois</span>
+              </p>
+              <p className="text-xs text-muted mb-5">facturé mensuellement</p>
             </>
           ) : (
             <>
@@ -199,20 +204,65 @@ export default function AbonnementPage() {
                 <span className="text-sm font-normal text-muted">/an</span>
               </p>
               <p className="text-xs text-muted">
-                soit{' '}
-                {monthlyFcfa && annualFcfa
-                  ? fmtFCFA(Math.round(annualFcfa / 12))
-                  : '—'}
-                /mois
+                soit {fmtFCFA(monthlyFcfa && annualFcfa ? Math.round(annualFcfa / 12) : null)}/mois
               </p>
               <p className="text-xs font-semibold text-success mb-5">2 mois offerts</p>
             </>
           )}
 
           <ul className="space-y-2">
-            {FEATURE_ROWS.filter(r => r.pro).map(row => (
+            {FEATURE_ROWS.map(row => (
+              <li
+                key={row.label}
+                className={`flex items-start gap-2 text-sm ${row.pro ? 'text-ink' : 'text-muted/50'}`}
+              >
+                {row.pro
+                  ? <Check size={14} className="text-brand-500 shrink-0 mt-0.5" />
+                  : <X    size={14} className="text-line   shrink-0 mt-0.5" />
+                }
+                {row.label}
+              </li>
+            ))}
+          </ul>
+        </Card>
+
+        {/* Plan Business */}
+        <Card className={`p-5 flex flex-col border-2 ${isOnBusinessTier ? 'border-indigo-500' : 'border-indigo-300'}`}>
+          <div className="flex items-start justify-between mb-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600">Business</p>
+            {isOnBusinessTier && <CurrentBadge color="indigo" />}
+          </div>
+
+          {isLifetime && isOnBusinessTier ? (
+            <>
+              <p className="font-display text-2xl font-bold text-ink">À vie</p>
+              <p className="text-xs text-muted mb-5">aucune expiration</p>
+            </>
+          ) : billing === 'monthly' ? (
+            <>
+              <p className="font-display text-2xl font-bold text-ink">
+                {fmtFCFA(businessMonthlyFcfa)}
+                <span className="text-sm font-normal text-muted">/mois</span>
+              </p>
+              <p className="text-xs text-muted mb-5">facturé mensuellement</p>
+            </>
+          ) : (
+            <>
+              <p className="font-display text-2xl font-bold text-ink">
+                {fmtFCFA(businessAnnualFcfa)}
+                <span className="text-sm font-normal text-muted">/an</span>
+              </p>
+              <p className="text-xs text-muted">
+                soit {fmtFCFA(businessAnnualFcfa ? Math.round(businessAnnualFcfa / 12) : null)}/mois
+              </p>
+              <p className="text-xs font-semibold text-success mb-5">2 mois offerts</p>
+            </>
+          )}
+
+          <ul className="space-y-2">
+            {FEATURE_ROWS.map(row => (
               <li key={row.label} className="flex items-start gap-2 text-sm text-ink">
-                <Check size={14} className="text-brand-500 shrink-0 mt-0.5" />
+                <Check size={14} className="text-indigo-500 shrink-0 mt-0.5" />
                 {row.label}
               </li>
             ))}
@@ -221,7 +271,7 @@ export default function AbonnementPage() {
       </div>
 
       {/* ── Comment payer ────────────────────────────────────────────────── */}
-      {!isLifetimePro && (
+      {!isLifetime && (
         <Card className="p-5 sm:p-6 space-y-5">
           <h2 className="font-semibold text-ink">Comment payer ?</h2>
 
@@ -247,7 +297,7 @@ export default function AbonnementPage() {
                 <p className="text-muted mt-1">
                   Envoyez la capture d'écran au{' '}
                   <strong className="font-mono">{CONTACT.WHATSAPP}</strong>
-                  {' '}avec le nom de votre commerce.
+                  {' '}avec le nom de votre commerce et la formule choisie.
                 </p>
               </div>
             </li>
@@ -255,7 +305,7 @@ export default function AbonnementPage() {
             <li className="flex gap-3">
               <StepBadge n={3} />
               <div className="text-sm">
-                <p className="font-medium text-ink">Accès Pro activé sous 24h</p>
+                <p className="font-medium text-ink">Accès activé sous 24h</p>
                 <p className="text-muted mt-1">
                   Votre compte est activé manuellement après vérification du paiement.
                 </p>
@@ -263,24 +313,36 @@ export default function AbonnementPage() {
             </li>
           </ol>
 
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center justify-center gap-2 bg-[#25D366] text-white font-semibold text-sm px-5 py-3 rounded-control hover:bg-[#1eb357] transition-colors w-full sm:w-auto"
-          >
-            <MessageCircle size={16} />
-            Contacter via WhatsApp
-            {' — '}
-            {billing === 'monthly'
-              ? `${fmtFCFA(monthlyFcfa)}/mois`
-              : `${fmtFCFA(annualFcfa)}/an`}
-          </a>
+          <div className="flex flex-col sm:flex-row gap-3">
+            {!isOnProTier && !isOnBusinessTier && (
+              <a
+                href={waUrlPro}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-[#25D366] text-white font-semibold text-sm px-5 py-3 rounded-control hover:bg-[#1eb357] transition-colors"
+              >
+                <MessageCircle size={16} />
+                Passer à Pro — {billing === 'monthly' ? `${fmtFCFA(monthlyFcfa)}/mois` : `${fmtFCFA(annualFcfa)}/an`}
+              </a>
+            )}
+
+            {!isOnBusinessTier && (
+              <a
+                href={waUrlBiz}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 bg-indigo-600 text-white font-semibold text-sm px-5 py-3 rounded-control hover:bg-indigo-700 transition-colors"
+              >
+                <MessageCircle size={16} />
+                Passer à Business — {billing === 'monthly' ? `${fmtFCFA(businessMonthlyFcfa)}/mois` : `${fmtFCFA(businessAnnualFcfa)}/an`}
+              </a>
+            )}
+          </div>
         </Card>
       )}
 
       {/* Retour si abonnement à vie */}
-      {isLifetimePro && (
+      {isLifetime && (
         <div className="text-center py-2">
           <Link
             to="/mon-abonnement"
@@ -296,9 +358,12 @@ export default function AbonnementPage() {
 
 // ── Sous-composants ───────────────────────────────────────────────────────────
 
-function CurrentBadge() {
+function CurrentBadge({ color = 'brand' }: { color?: 'brand' | 'indigo' }) {
+  const cls = color === 'indigo'
+    ? 'bg-indigo-50 text-indigo-600'
+    : 'bg-brand-50 text-brand-500';
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-brand-50 text-brand-500 px-2 py-0.5 rounded-full leading-none shrink-0">
+    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full leading-none shrink-0 ${cls}`}>
       <CheckCircle size={10} />
       Votre formule
     </span>

@@ -10,6 +10,7 @@ import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import PremiumGate from '../components/PremiumGate';
+import LimitAlert from '../components/LimitAlert';
 import { useSubscription } from '../hooks/useSubscription';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
@@ -430,7 +431,7 @@ function EmployeeCard({ employee, boutiques, onEdit, onToggleActive, toggling }:
 // ── Main page ────────────────────────────────────────────────────────────────────
 
 export default function EmployesPage() {
-  const { hasFeature } = useSubscription();
+  const { hasFeature, limits, tier } = useSubscription();
   const { boutiques } = useBoutique();
 
   const [employees,    setEmployees]    = useState<Employee[]>([]);
@@ -489,6 +490,8 @@ export default function EmployesPage() {
 
   if (!hasFeature('EMPLOYEES')) return <PremiumGate feature="EMPLOYEES" fullPage>{null}</PremiumGate>;
 
+  const limitReached = limits.maxUsers !== null && employees.length >= limits.maxUsers;
+
   return (
     <div className="space-y-5">
 
@@ -504,8 +507,10 @@ export default function EmployesPage() {
           )}
         </div>
       }>
-        <Button onClick={() => setShowCreate(true)}><Plus size={18} /> Nouvel employé</Button>
+        <Button onClick={() => setShowCreate(true)} disabled={limitReached}><Plus size={18} /> Nouvel employé</Button>
       </PageHeader>
+
+      {limitReached && <LimitAlert label="employés" currentTier={tier} />}
 
       {/* Content */}
       {loading ? (

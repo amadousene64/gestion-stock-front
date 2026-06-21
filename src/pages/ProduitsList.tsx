@@ -3,6 +3,7 @@ import { Plus, Pencil, Check, X, Loader2, Download, Upload, FileSpreadsheet, Ale
 import { useNavigate } from 'react-router-dom';
 import { exportApi } from '../services/exportApi';
 import { useSubscription } from '../hooks/useSubscription';
+import LimitAlert from '../components/LimitAlert';
 import { importApi } from '../services/importApi';
 import type { ImportPreviewResponse, ImportRowPreview, ImportResult } from '../services/importApi';
 import { productsApi, categoriesApi, unitsApi } from '../services/catalogueApi';
@@ -389,7 +390,7 @@ const EMPTY_FORM: ProductDto = {
 
 export default function ProduitsList() {
   const navigate = useNavigate();
-  const { hasFeature } = useSubscription();
+  const { hasFeature, limits, tier } = useSubscription();
   const [products,   setProducts]   = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [units,      setUnits]      = useState<Unit[]>([]);
@@ -477,8 +478,9 @@ export default function ProduitsList() {
     }
   };
 
-  const isEditing   = modal !== null && modal !== 'create';
-  const filtered    = products.filter(p =>
+  const isEditing        = modal !== null && modal !== 'create';
+  const productsLimitReached = limits.maxProducts !== null && products.length >= limits.maxProducts;
+  const filtered         = products.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
   );
   const catOptions  = categories.map(c => ({ value: c.id, label: c.name }));
@@ -489,7 +491,7 @@ export default function ProduitsList() {
 
       <PageHeader title={<h2 className="font-display text-xl font-bold text-ink">Produits</h2>}>
         <PageActions
-          primary={<Button onClick={openCreate}><Plus size={18} /> Ajouter</Button>}
+          primary={<Button onClick={openCreate} disabled={productsLimitReached}><Plus size={18} /> Ajouter</Button>}
           secondary={[
             { label: 'Importer', icon: <Upload size={14} />,   onClick: () => setImporting(true) },
             {
@@ -503,6 +505,8 @@ export default function ProduitsList() {
           ]}
         />
       </PageHeader>
+
+      {productsLimitReached && <LimitAlert label="produits" currentTier={tier} />}
 
       <Input
         aria-label="Rechercher un produit"

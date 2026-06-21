@@ -12,11 +12,13 @@ const FREE_DEFAULT: SubscriptionStatus = {
   limits: {
     maxStores: 1,
     maxUsers: 1,
-    maxProducts: 50,
-    maxSalesPerMonth: 300,
+    maxProducts: 20,
+    maxSalesPerMonth: 100,
     features: ['CAISSE', 'CLIENTS', 'STOCK', 'DEPENSES'],
     monthlyFcfa: 5000,
     annualFcfa: 50000,
+    businessMonthlyFcfa: 15000,
+    businessAnnualFcfa: 150000,
   },
 };
 

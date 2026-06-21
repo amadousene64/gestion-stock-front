@@ -10,6 +10,8 @@ import { useBoutique } from '../contexts/BoutiqueContext';
 import type { Boutique, BoutiqueDto } from '../types/boutique';
 import type { Location } from '../types/location';
 import { extractApiError } from '../lib/apiError';
+import { useSubscription } from '../hooks/useSubscription';
+import LimitAlert from '../components/LimitAlert';
 import Button from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
@@ -278,6 +280,7 @@ const EMPTY_BOUTIQUE: BoutiqueDto = { name: '', address: null };
 
 export default function BoutiquesPage() {
   const { reload: reloadContext } = useBoutique();
+  const sub = useSubscription();
 
   const [boutiques,  setBoutiques]  = useState<Boutique[]>([]);
   const [locations,  setLocations]  = useState<Location[]>([]);
@@ -381,14 +384,18 @@ export default function BoutiquesPage() {
   };
 
   /* ── Rendu ────────────────────────────────────────────── */
+  const boutiquesLimitReached = sub.limits.maxStores !== null && boutiques.length >= sub.limits.maxStores;
+
   return (
     <div className="space-y-6">
 
       {/* ── Boutiques ─────────────────────────────────── */}
       <div className="space-y-4">
         <PageHeader title={<h1 className="font-display text-xl font-bold text-ink">Boutiques</h1>}>
-          <Button onClick={openCreate}><Plus size={18} /> Ajouter</Button>
+          <Button onClick={openCreate} disabled={boutiquesLimitReached}><Plus size={18} /> Ajouter</Button>
         </PageHeader>
+
+        {boutiquesLimitReached && <LimitAlert label="boutiques" currentTier={sub.tier} />}
 
         {loading ? (
           <div className="py-8 flex justify-center">

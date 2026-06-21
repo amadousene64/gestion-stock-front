@@ -22,9 +22,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const TIER_LABEL: Record<string, string> = {
-  trial: 'Essai',
-  free:  'Gratuit',
-  pro:   'Pro',
+  trial:    'Essai',
+  free:     'Gratuit',
+  pro:      'Pro',
+  business: 'Business',
+  paid:     'Business',
 };
 
 const BILLING_LABEL: Record<string, string> = {

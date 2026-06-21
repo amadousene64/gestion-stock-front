@@ -49,7 +49,15 @@
       "Bash(node -e \"const p=require\\('./node_modules/recharts/package.json'\\); console.log\\('recharts',p.version\\); const r=require\\('./node_modules/react/package.json'\\); console.log\\('react',r.version\\);\")",
       "PowerShell(Start-Sleep -Seconds 15; try { $r = Invoke-WebRequest -Uri \"http://localhost:8080/actuator/health\" -UseBasicParsing -TimeoutSec 5; $r.Content } catch { \"Not ready yet: $_\" })",
       "PowerShell(cd C:\\\\Users\\\\Amadou\\\\Documents\\\\gestion-api; $mvn = Get-Command mvn -ErrorAction SilentlyContinue; if \\(-not $mvn\\) { Get-ChildItem \"C:\\\\Program Files\\\\Maven\" -Recurse -Filter \"mvn.cmd\" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName } else { $mvn.Source })",
-      "Bash(mvn compile *)"
+      "Bash(mvn compile *)",
+      "Bash(cmd /c \"cd C:\\\\Users\\\\Amadou\\\\Documents\\\\gestion-api && mvnw.cmd compile -q 2>&1\")",
+      "Bash(\"/c/Users/Amadou/Documents/gestion-api/mvnw\" -f \"/c/Users/Amadou/Documents/gestion-api/pom.xml\" compile -q)",
+      "Bash(taskkill *)",
+      "Bash(\"/c/Users/Amadou/Documents/gestion-api/mvnw\" -f \"/c/Users/Amadou/Documents/gestion-api/pom.xml\" spring-boot:run)",
+      "Bash(echo \"Backend PID=$!\")",
+      "Bash(PGPASSWORD=gestion psql *)",
+      "Bash(/c/Program Files/PostgreSQL/17/bin/psql *)",
+      "Bash(docker exec gestion-db *)"
     ]
   }
 }

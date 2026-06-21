@@ -6,6 +6,8 @@ export interface SubscriptionLimits {
   features: string[];
   monthlyFcfa: number;
   annualFcfa: number;
+  businessMonthlyFcfa?: number;
+  businessAnnualFcfa?: number;
 }
 
 export interface SubscriptionStatus {

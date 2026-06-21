@@ -9,7 +9,13 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 
-const TIER_LABELS: Record<string, string> = { trial: 'Essai', free: 'Gratuit', paid: 'Payant' };
+const TIER_LABELS: Record<string, string> = {
+  trial:    'Essai',
+  free:     'Gratuit',
+  pro:      'Pro',
+  business: 'Business',
+  paid:     'Business', // alias historique
+};
 const EVENT_LABELS: Record<string, string> = {
   trial_started:           'Essai démarré',
   trial_ended_downgraded:  'Essai terminé → gratuit',
@@ -37,7 +43,7 @@ function formatDateTime(iso: string) {
 }
 
 const INITIAL_FORM: ActivateSubscriptionRequest = {
-  tier: 'paid',
+  tier: 'pro',
   billingCycle: 'monthly',
   durationMonths: 1,
   amountPaid: undefined,
@@ -189,8 +195,9 @@ export default function AdminTenantDetailPage() {
               value={form.tier}
               onChange={e => handleFormChange('tier', e.target.value)}
               options={[
-                { value: 'paid', label: 'Payant (illimité)' },
-                { value: 'free', label: 'Gratuit (limité)' },
+                { value: 'pro',      label: 'Pro' },
+                { value: 'business', label: 'Business (illimité)' },
+                { value: 'free',     label: 'Gratuit' },
               ]}
             />
             {form.tier !== 'free' && (
