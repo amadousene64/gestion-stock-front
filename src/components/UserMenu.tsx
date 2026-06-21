@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { User, Settings, LogOut, ChevronDown } from 'lucide-react';
+import { User, Settings, LogOut, ChevronDown, CreditCard } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../contexts/UserProfileContext';
 
@@ -101,6 +101,16 @@ export default function UserMenu() {
               >
                 <Settings size={16} className="text-muted shrink-0" />
                 Paramètres du commerce
+              </Link>
+            )}
+            {isOwner && (
+              <Link
+                to="/mon-abonnement"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-3 px-4 min-h-[44px] text-sm text-ink hover:bg-canvas transition-colors"
+              >
+                <CreditCard size={16} className="text-muted shrink-0" />
+                Mon abonnement
               </Link>
             )}
           </div>

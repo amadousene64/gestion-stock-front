@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
-import { ChevronDown, ChevronUp, Download, Loader2, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Download, Loader2, Search, X, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import { salesApi } from '../services/salesApi';
 import { invoicesApi } from '../services/invoicesApi';
 import { exportApi } from '../services/exportApi';
 import { useBoutique } from '../contexts/BoutiqueContext';
+import { useSubscription } from '../hooks/useSubscription';
 import type { SaleSummary, SaleDetail } from '../types/sale';
 import { formatFCFA } from '../lib/format';
 
@@ -184,6 +186,8 @@ interface Filters {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function VentesPage() {
+  const navigate = useNavigate();
+  const { hasFeature } = useSubscription();
   const { boutiques, activeBoutiqueId, isOwner } = useBoutique();
 
   const [sales,     setSales]     = useState<SaleSummary[]>([]);
@@ -248,6 +252,7 @@ export default function VentesPage() {
       >
         <button
           onClick={() => {
+            if (!hasFeature('EXPORT')) { navigate('/abonnement'); return; }
             setExporting(true);
             exportApi.sales({
               storeId:      filters.storeId,
@@ -260,8 +265,8 @@ export default function VentesPage() {
           disabled={exporting}
           className="inline-flex items-center gap-1.5 min-h-[48px] px-3 text-sm font-semibold rounded-control border border-line bg-surface text-muted hover:text-ink hover:border-ink transition-colors disabled:opacity-50"
         >
-          {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-          Exporter
+          {exporting ? <Loader2 size={14} className="animate-spin" /> : hasFeature('EXPORT') ? <Download size={14} /> : <Lock size={14} />}
+          {hasFeature('EXPORT') ? 'Exporter' : 'Exporter (Pro)'}
         </button>
       </PageHeader>
 

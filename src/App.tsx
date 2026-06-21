@@ -29,6 +29,8 @@ import FacturesPage from './pages/FacturesPage';
 import VentesPage from './pages/VentesPage';
 import StatistiquesPage from './pages/StatistiquesPage';
 import PortailClientPage from './pages/PortailClientPage';
+import AbonnementPage from './pages/AbonnementPage';
+import MonAbonnementPage from './pages/MonAbonnementPage';
 
 export default function App() {
   return (
@@ -63,6 +65,8 @@ export default function App() {
                     <Route path="/ventes"              element={<VentesPage />} />
                     <Route path="/statistiques"        element={<StatistiquesPage />} />
                     <Route path="/parametres-commerce" element={<ParametresCommercePage />} />
+                    <Route path="/abonnement"          element={<AbonnementPage />} />
+                    <Route path="/mon-abonnement"      element={<MonAbonnementPage />} />
                   </Route>
                 </Route>
 

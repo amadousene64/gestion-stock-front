@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import PremiumGate from '../components/PremiumGate';
 import { Loader2 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -308,6 +309,48 @@ export default function StatistiquesPage() {
 
   if (!isOwner) return <Navigate to="/" replace />;
 
+  const scopeLabel = isAllBoutiques ? 'Tout le réseau' : (activeBoutique?.name ?? '—');
+
+  return (
+    <PremiumGate feature="STATS" fullPage>
+      <StatistiquesContent
+        period={period} setPeriod={setPeriod}
+        salesData={salesData} products={products}
+        paymentSplit={paymentSplit} storeRevenue={storeRevenue}
+        cashflow={cashflow} debtors={debtors}
+        loadingSales={loadingSales} loadingProds={loadingProds}
+        loadingPay={loadingPay} loadingStore={loadingStore}
+        loadingCashflow={loadingCashflow} loadingDebtors={loadingDebtors}
+        errSales={errSales} errProds={errProds} errPay={errPay}
+        errStore={errStore} errCashflow={errCashflow} errDebtors={errDebtors}
+        isAllBoutiques={isAllBoutiques}
+        scopeLabel={scopeLabel}
+      />
+    </PremiumGate>
+  );
+}
+
+interface StatsProps {
+  period: Period; setPeriod: (p: Period) => void;
+  salesData: DailySales[]; products: TopProduct[];
+  paymentSplit: PaymentSplit[]; storeRevenue: StoreRevenue[];
+  cashflow: CashflowDay[]; debtors: TopDebtor[];
+  loadingSales: boolean; loadingProds: boolean; loadingPay: boolean;
+  loadingStore: boolean; loadingCashflow: boolean; loadingDebtors: boolean;
+  errSales: string; errProds: string; errPay: string;
+  errStore: string; errCashflow: string; errDebtors: string;
+  isAllBoutiques: boolean;
+  scopeLabel: string;
+}
+
+function StatistiquesContent({
+  period, setPeriod,
+  salesData, products, paymentSplit, storeRevenue, cashflow, debtors,
+  loadingSales, loadingProds, loadingPay, loadingStore, loadingCashflow, loadingDebtors,
+  errSales, errProds, errPay, errStore, errCashflow, errDebtors,
+  isAllBoutiques, scopeLabel,
+}: StatsProps) {
+
   // ── Dérivations ───────────────────────────────────────────────────────────
 
   const chartData  = fillMissing(salesData, period);
@@ -330,8 +373,6 @@ export default function StatistiquesPage() {
   const cfXInterval  = period === '7d' ? 0 : period === 'month' ? 4 : 6;
 
   const debtorBarsH  = Math.max(200, debtors.length * 44 + 40);
-
-  const scopeLabel = isAllBoutiques ? 'Tout le réseau' : (activeBoutique?.name ?? '—');
 
   return (
     <div className="space-y-6">

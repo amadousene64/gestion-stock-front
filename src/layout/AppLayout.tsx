@@ -4,6 +4,7 @@ import SideNav from './SideNav';
 import BottomNav from './BottomNav';
 import BoutiqueSelector from '../components/BoutiqueSelector';
 import UserMenu from '../components/UserMenu';
+import SubscriptionBanner from '../components/SubscriptionBanner';
 
 export default function AppLayout() {
   const { tenant } = useTenant();
@@ -32,6 +33,8 @@ export default function AppLayout() {
             <UserMenu />
           </div>
         </header>
+
+        <SubscriptionBanner />
 
         <main className="flex-1 pb-[72px] md:pb-0">
           <div className="w-full max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8">

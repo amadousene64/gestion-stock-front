@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, X, Check, Loader2, Phone, ChevronRight, Pencil, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, X, Check, Loader2, Phone, ChevronRight, Pencil, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
 import { exportApi } from '../services/exportApi';
+import { useSubscription } from '../hooks/useSubscription';
 import { importApi } from '../services/importApi';
 import type { CustomerImportPreview, CustomerImportRow } from '../services/importApi';
 import { customersApi } from '../services/customersApi';
@@ -253,6 +254,8 @@ type CustomerForm = { name: string; phone: string };
 const EMPTY_FORM: CustomerForm = { name: '', phone: '' };
 
 export default function ClientsPage() {
+  const navigate = useNavigate();
+  const { hasFeature } = useSubscription();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [search,    setSearch]    = useState('');
@@ -326,8 +329,12 @@ export default function ClientsPage() {
           secondary={[
             { label: 'Importer', icon: <Upload size={14} />,   onClick: () => setImporting(true) },
             {
-              label: 'Exporter', icon: <Download size={14} />, loading: exporting,
-              onClick: () => { setExporting(true); exportApi.customers().finally(() => setExporting(false)); },
+              label: hasFeature('EXPORT') ? 'Exporter' : 'Exporter (Pro)',
+              icon: hasFeature('EXPORT') ? <Download size={14} /> : <Lock size={14} />,
+              loading: exporting,
+              onClick: hasFeature('EXPORT')
+                ? () => { setExporting(true); exportApi.customers().finally(() => setExporting(false)); }
+                : () => navigate('/abonnement'),
             },
           ]}
         />

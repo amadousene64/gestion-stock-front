@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   PackagePlus, ArrowLeftRight, ClipboardList, Sliders,
-  ChevronDown, ChevronUp, AlertTriangle, Loader2, Check, X, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2,
+  ChevronDown, ChevronUp, AlertTriangle, Loader2, Check, X, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Lock,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { exportApi } from '../services/exportApi';
+import { useSubscription } from '../hooks/useSubscription';
 import { importApi } from '../services/importApi';
 import type { StockImportPreview, StockImportRow } from '../services/importApi';
 import { useBoutique } from '../contexts/BoutiqueContext';
@@ -646,6 +648,8 @@ function InventoryModal({
 /* ─── Page principale ─────────────────────────────────────── */
 
 export default function StockPage() {
+  const navigate = useNavigate();
+  const { hasFeature } = useSubscription();
   const { activeBoutiqueId } = useBoutique();
 
   /* ── Données ─────────────────────────────────────────── */
@@ -805,8 +809,12 @@ export default function StockPage() {
             { label: 'Inventaire',  icon: <ClipboardList size={16} />,  onClick: () => setModal('inventory') },
             { label: 'Importer',    icon: <Upload size={14} />,          onClick: () => setImporting(true) },
             {
-              label: 'Exporter', icon: <Download size={14} />, loading: exporting,
-              onClick: () => { setExporting(true); exportApi.stock(activeBoutiqueId).finally(() => setExporting(false)); },
+              label: hasFeature('EXPORT') ? 'Exporter' : 'Exporter (Pro)',
+              icon: hasFeature('EXPORT') ? <Download size={14} /> : <Lock size={14} />,
+              loading: exporting,
+              onClick: hasFeature('EXPORT')
+                ? () => { setExporting(true); exportApi.stock(activeBoutiqueId).finally(() => setExporting(false)); }
+                : () => navigate('/abonnement'),
             },
           ]}
         />

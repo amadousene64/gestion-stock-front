@@ -1,8 +1,11 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   FileDown, X, Plus, Loader2, Check, ChevronRight,
-  AlertCircle, RefreshCw, Trash2,
+  AlertCircle, RefreshCw, Trash2, Lock,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useSubscription } from '../hooks/useSubscription';
+import PremiumGate from '../components/PremiumGate';
 import { invoicesApi } from '../services/invoicesApi';
 import { proformasApi } from '../services/proformasApi';
 import { productsApi } from '../services/catalogueApi';
@@ -107,6 +110,7 @@ interface InvoiceDetailModalProps {
 }
 
 function InvoiceDetailModal({ invoiceId, onClose, onCancelled }: InvoiceDetailModalProps) {
+  const { hasFeature } = useSubscription();
   const [detail,    setDetail]    = useState<InvoiceDetail | null>(null);
   const [loading,   setLoading]   = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -210,16 +214,25 @@ function InvoiceDetailModal({ invoiceId, onClose, onCancelled }: InvoiceDetailMo
 
           {/* Actions */}
           <div className="flex flex-wrap gap-3 pt-1">
-            <Button
-              onClick={handlePdf}
-              disabled={pdfLoading}
-              className="flex-1 min-w-[140px]"
-            >
-              {pdfLoading
-                ? <><Loader2 size={16} className="animate-spin" /> PDF…</>
-                : <><FileDown size={16} /> Télécharger PDF</>
-              }
-            </Button>
+            {hasFeature('PDF_INVOICES') ? (
+              <Button
+                onClick={handlePdf}
+                disabled={pdfLoading}
+                className="flex-1 min-w-[140px]"
+              >
+                {pdfLoading
+                  ? <><Loader2 size={16} className="animate-spin" /> PDF…</>
+                  : <><FileDown size={16} /> Télécharger PDF</>
+                }
+              </Button>
+            ) : (
+              <Link
+                to="/abonnement"
+                className="flex-1 min-w-[140px] inline-flex items-center justify-center gap-2 min-h-[48px] px-3 rounded-control border border-line bg-canvas text-muted text-sm font-semibold cursor-pointer hover:text-ink transition-colors"
+              >
+                <Lock size={15} /> PDF — Formule Pro
+              </Link>
+            )}
             {detail.status === 'issued' && (
               <Button
                 variant="secondary"
@@ -980,6 +993,8 @@ const PROFORMA_STATUS_FILTERS = [
 ];
 
 export default function FacturesPage() {
+  const { hasFeature } = useSubscription();
+  const hasProformas = hasFeature('PROFORMAS');
   const { boutiques, activeBoutiqueId, isAllBoutiques } = useBoutique();
 
   /* ── Tabs ────────────────────────────────────────────── */
@@ -1071,7 +1086,7 @@ export default function FacturesPage() {
 
       {/* Page header */}
       <PageHeader title={<h1 className="font-display text-xl font-bold text-ink">Factures & Pro-formas</h1>}>
-        {tab === 'proformas' && (
+        {tab === 'proformas' && hasProformas && (
           <Button onClick={() => setCreateModal(true)}>
             <Plus size={18} /> Nouvelle pro-forma
           </Button>
@@ -1148,7 +1163,12 @@ export default function FacturesPage() {
       )}
 
       {/* ── PROFORMAS TAB ────────────────────────────────── */}
-      {tab === 'proformas' && (
+      {tab === 'proformas' && !hasProformas && (
+        <PremiumGate feature="PROFORMAS">
+          <div className="h-48" />
+        </PremiumGate>
+      )}
+      {tab === 'proformas' && hasProformas && (
         <div className="space-y-3">
           {/* Filters */}
           <div className="flex gap-2 flex-wrap">

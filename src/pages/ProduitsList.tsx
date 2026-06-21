@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Pencil, Check, X, Loader2, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Pencil, Check, X, Loader2, Download, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Lock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { exportApi } from '../services/exportApi';
+import { useSubscription } from '../hooks/useSubscription';
 import { importApi } from '../services/importApi';
 import type { ImportPreviewResponse, ImportRowPreview, ImportResult } from '../services/importApi';
 import { productsApi, categoriesApi, unitsApi } from '../services/catalogueApi';
@@ -386,6 +388,8 @@ const EMPTY_FORM: ProductDto = {
 };
 
 export default function ProduitsList() {
+  const navigate = useNavigate();
+  const { hasFeature } = useSubscription();
   const [products,   setProducts]   = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [units,      setUnits]      = useState<Unit[]>([]);
@@ -489,8 +493,12 @@ export default function ProduitsList() {
           secondary={[
             { label: 'Importer', icon: <Upload size={14} />,   onClick: () => setImporting(true) },
             {
-              label: 'Exporter', icon: <Download size={14} />, loading: exporting,
-              onClick: () => { setExporting(true); exportApi.products().finally(() => setExporting(false)); },
+              label: hasFeature('EXPORT') ? 'Exporter' : 'Exporter (Pro)',
+              icon: hasFeature('EXPORT') ? <Download size={14} /> : <Lock size={14} />,
+              loading: exporting,
+              onClick: hasFeature('EXPORT')
+                ? () => { setExporting(true); exportApi.products().finally(() => setExporting(false)); }
+                : () => navigate('/abonnement'),
             },
           ]}
         />

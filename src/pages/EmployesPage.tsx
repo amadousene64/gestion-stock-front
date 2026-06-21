@@ -9,6 +9,8 @@ import Button from '../components/ui/Button';
 import PageHeader from '../components/ui/PageHeader';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
+import PremiumGate from '../components/PremiumGate';
+import { useSubscription } from '../hooks/useSubscription';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
 
@@ -428,6 +430,7 @@ function EmployeeCard({ employee, boutiques, onEdit, onToggleActive, toggling }:
 // ── Main page ────────────────────────────────────────────────────────────────────
 
 export default function EmployesPage() {
+  const { hasFeature } = useSubscription();
   const { boutiques } = useBoutique();
 
   const [employees,    setEmployees]    = useState<Employee[]>([]);
@@ -483,6 +486,8 @@ export default function EmployesPage() {
 
   const active   = employees.filter(e => e.active);
   const inactive = employees.filter(e => !e.active);
+
+  if (!hasFeature('EMPLOYEES')) return <PremiumGate feature="EMPLOYEES" fullPage>{null}</PremiumGate>;
 
   return (
     <div className="space-y-5">
