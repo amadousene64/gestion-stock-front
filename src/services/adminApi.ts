@@ -13,4 +13,12 @@ export const adminApi = {
   activateSubscription(id: string, req: ActivateSubscriptionRequest): Promise<SubscriptionStatus> {
     return api.post<SubscriptionStatus>(`/api/admin/tenants/${id}/subscription`, req).then(r => r.data);
   },
+
+  suspend(id: string, motif?: string): Promise<SubscriptionStatus> {
+    return api.post<SubscriptionStatus>(`/api/admin/tenants/${id}/suspend`, { motif }).then(r => r.data);
+  },
+
+  reactivate(id: string): Promise<SubscriptionStatus> {
+    return api.post<SubscriptionStatus>(`/api/admin/tenants/${id}/reactivate`).then(r => r.data);
+  },
 };

@@ -36,7 +36,8 @@ export function useSubscription() {
     trialEndsAt: sub.trialEndsAt,
     limits: sub.limits,
     isLifetime: isLifetime(sub),
-    isBlocked: sub.status === 'expired',
+    isBlocked: sub.status === 'expired' || sub.status === 'suspended',
+    isSuspended: sub.status === 'suspended',
     isLoading,
     hasFeature: (feature: string) =>
       isLoading || sub.limits.features.includes(feature),

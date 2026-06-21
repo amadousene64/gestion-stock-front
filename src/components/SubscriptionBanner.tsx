@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { AlertTriangle, Info, X } from 'lucide-react';
+import { AlertTriangle, Info, MessageCircle, X } from 'lucide-react';
 import { useSubscription } from '../hooks/useSubscription';
 import { useAuth } from '../contexts/AuthContext';
+
+const WHATSAPP_NUMBER = '221775350649'; // Orange Money / Wave / WhatsApp
 
 export default function SubscriptionBanner() {
   const { user } = useAuth();
@@ -10,6 +12,29 @@ export default function SubscriptionBanner() {
   if (isLoading || !user) return null;
 
   const isOwner = user.role === 'owner';
+
+  if (status === 'suspended') {
+    const waMsg = encodeURIComponent('Bonjour, mon compte commerçant est suspendu. Je souhaite régulariser ma situation.');
+    return (
+      <div className="bg-red-100 border-b-2 border-danger px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <X size={16} className="text-danger shrink-0" />
+          <span className="text-sm text-red-900 font-semibold">
+            Votre compte est suspendu. Les modifications sont désactivées. Contactez-nous pour régulariser.
+          </span>
+        </div>
+        <a
+          href={`https://wa.me/${WHATSAPP_NUMBER}?text=${waMsg}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center justify-center gap-1.5 bg-[#25D366] text-white text-xs font-semibold px-3 py-1.5 rounded-control hover:bg-[#1eb357] transition-colors shrink-0 whitespace-nowrap"
+        >
+          <MessageCircle size={13} />
+          Nous contacter
+        </a>
+      </div>
+    );
+  }
 
   if (status === 'active') return null;
 

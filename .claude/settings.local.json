@@ -57,7 +57,8 @@
       "Bash(echo \"Backend PID=$!\")",
       "Bash(PGPASSWORD=gestion psql *)",
       "Bash(/c/Program Files/PostgreSQL/17/bin/psql *)",
-      "Bash(docker exec gestion-db *)"
+      "Bash(docker exec gestion-db *)",
+      "Bash(\"/c/Users/Amadou/Documents/gestion-api/mvnw\" -f \"/c/Users/Amadou/Documents/gestion-api/pom.xml\" compile)"
     ]
   }
 }

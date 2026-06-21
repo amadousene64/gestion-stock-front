@@ -22,6 +22,8 @@ const EVENT_LABELS: Record<string, string> = {
   activated:               'Abonnement activé',
   grace_started:           'Période de grâce',
   expired:                 'Expiré',
+  suspended:               'Compte suspendu',
+  reactivated:             'Compte réactivé',
 };
 const PAYMENT_LABELS: Record<string, string> = {
   orange_money_manual: 'Orange Money',
@@ -64,6 +66,14 @@ export default function AdminTenantDetailPage() {
   const [saveError, setSaveError] = useState('');
   const [saveOk, setSaveOk]     = useState(false);
 
+  // Suspension
+  const [suspendModal, setSuspendModal]   = useState(false);
+  const [suspendMotif, setSuspendMotif]   = useState('');
+  const [suspending, setSuspending]       = useState(false);
+  const [suspendErr, setSuspendErr]       = useState('');
+  const [reactivating, setReactivating]   = useState(false);
+  const [reactivateConfirm, setReactivateConfirm] = useState(false);
+
   const load = () => {
     if (!id) return;
     setLoading(true);
@@ -81,6 +91,34 @@ export default function AdminTenantDetailPage() {
     setForm(f => ({ ...f, [key]: value }));
     setSaveError('');
     setSaveOk(false);
+  };
+
+  const handleSuspend = async () => {
+    if (!id) return;
+    setSuspending(true); setSuspendErr('');
+    try {
+      await adminApi.suspend(id, suspendMotif || undefined);
+      setSuspendModal(false); setSuspendMotif('');
+      load();
+    } catch {
+      setSuspendErr('Erreur lors de la suspension. Réessayez.');
+    } finally {
+      setSuspending(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!id) return;
+    setReactivating(true);
+    try {
+      await adminApi.reactivate(id);
+      setReactivateConfirm(false);
+      load();
+    } catch {
+      // silencieux — le rechargement ne se fait pas, l'admin peut réessayer
+    } finally {
+      setReactivating(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -134,8 +172,54 @@ export default function AdminTenantDetailPage() {
           <h1 className="font-display text-2xl font-bold text-ink">{tenant.name}</h1>
           <p className="text-sm text-muted mt-0.5">Créé le {formatDate(tenant.createdAt)} · {tenant.currency}</p>
         </div>
-        <SubscriptionBadge status={sub.status} subscription={sub} />
+        <div className="flex items-center gap-2 flex-wrap">
+          <SubscriptionBadge status={sub.status} subscription={sub} />
+          {sub.status === 'suspended' ? (
+            reactivateConfirm ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted">Confirmer ?</span>
+                <button
+                  onClick={handleReactivate}
+                  disabled={reactivating}
+                  className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-control hover:bg-green-100 transition-colors disabled:opacity-50"
+                >
+                  {reactivating ? 'Réactivation…' : 'Oui, réactiver'}
+                </button>
+                <button
+                  onClick={() => setReactivateConfirm(false)}
+                  className="text-xs text-muted hover:text-ink"
+                >
+                  Annuler
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setReactivateConfirm(true)}
+                className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-control hover:bg-green-100 transition-colors"
+              >
+                Réactiver
+              </button>
+            )
+          ) : (
+            <button
+              onClick={() => { setSuspendModal(true); setSuspendErr(''); setSuspendMotif(''); }}
+              className="text-xs font-semibold text-danger bg-red-50 border border-red-200 px-3 py-1.5 rounded-control hover:bg-red-100 transition-colors"
+            >
+              Suspendre
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Bandeau suspendu */}
+      {sub.status === 'suspended' && (
+        <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-card px-4 py-3">
+          <span className="text-sm text-red-800">
+            <strong>Compte suspendu.</strong> L'écriture est bloquée pour ce commerce. La lecture reste accessible.
+            Utilisez le bouton "Réactiver" pour rétablir l'accès.
+          </span>
+        </div>
+      )}
 
       {/* Statut actuel */}
       <Card className="p-4 sm:p-6">
@@ -317,6 +401,52 @@ export default function AdminTenantDetailPage() {
             ))}
           </div>
         </Card>
+      )}
+
+      {/* Modale de suspension */}
+      {suspendModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
+          <div className="bg-surface rounded-card shadow-2xl w-full max-w-md p-6 space-y-4">
+            <h2 className="font-display text-lg font-bold text-ink">Suspendre ce commerce</h2>
+            <p className="text-sm text-muted">
+              L'écriture sera <strong>bloquée immédiatement</strong> (ventes, produits, employés…).
+              La lecture reste accessible. Cette action est <strong>réversible</strong>.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">
+                Motif <span className="text-muted font-normal">(optionnel)</span>
+              </label>
+              <input
+                type="text"
+                value={suspendMotif}
+                onChange={e => setSuspendMotif(e.target.value)}
+                placeholder="Ex. Paiement en attente depuis 30 jours"
+                className="w-full rounded-control border border-line bg-canvas px-3 py-2 text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-brand-500"
+                autoFocus
+              />
+            </div>
+            {suspendErr && (
+              <p className="text-sm text-danger bg-red-50 rounded-control px-3 py-2">{suspendErr}</p>
+            )}
+            <div className="flex gap-3 pt-1">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setSuspendModal(false)}
+                className="flex-1"
+              >
+                Annuler
+              </Button>
+              <button
+                onClick={handleSuspend}
+                disabled={suspending}
+                className="flex-1 min-h-[44px] rounded-control bg-danger text-white text-sm font-semibold hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {suspending ? 'Suspension…' : 'Confirmer la suspension'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

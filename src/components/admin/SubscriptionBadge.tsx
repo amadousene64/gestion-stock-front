@@ -2,13 +2,14 @@ import type { SubscriptionStatus } from '../../types/admin';
 import { isLifetime } from '../../types/admin';
 
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
-  trial:    { label: 'Essai',    className: 'bg-brand-100 text-brand-600' },
-  active:   { label: 'Actif',   className: 'bg-green-100 text-green-700' },
-  lifetime: { label: 'À vie',   className: 'bg-purple-100 text-purple-700' },
-  business: { label: 'Business', className: 'bg-indigo-100 text-indigo-700' },
-  free:     { label: 'Gratuit', className: 'bg-gray-100 text-gray-600' },
-  grace:    { label: 'Grâce',   className: 'bg-yellow-100 text-yellow-700' },
-  expired:  { label: 'Expiré',  className: 'bg-red-100 text-danger' },
+  trial:     { label: 'Essai',     className: 'bg-brand-100 text-brand-600' },
+  active:    { label: 'Actif',    className: 'bg-green-100 text-green-700' },
+  lifetime:  { label: 'À vie',    className: 'bg-purple-100 text-purple-700' },
+  business:  { label: 'Business', className: 'bg-indigo-100 text-indigo-700' },
+  free:      { label: 'Gratuit',  className: 'bg-gray-100 text-gray-600' },
+  grace:     { label: 'Grâce',    className: 'bg-yellow-100 text-yellow-700' },
+  expired:   { label: 'Expiré',   className: 'bg-red-100 text-danger' },
+  suspended: { label: 'Suspendu', className: 'bg-red-100 text-danger' },
 };
 
 interface Props {
