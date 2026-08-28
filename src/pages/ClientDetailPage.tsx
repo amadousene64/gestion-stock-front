@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, Phone, Pencil, X, Check, Loader2,
-  Share2, Copy, Trash2, FileText, Receipt,
+  Share2, Copy, Trash2, FileText, Receipt, MessageCircle,
 } from 'lucide-react';
 import { customersApi } from '../services/customersApi';
 import { invoicesApi } from '../services/invoicesApi';
 import type { CustomerDetail, LedgerEntry } from '../types/customer';
 import { extractApiError } from '../lib/apiError';
 import { formatFCFA } from '../lib/format';
+import { buildWhatsappLink } from '../lib/whatsapp';
+import { useTenant } from '../contexts/TenantContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
@@ -218,6 +220,7 @@ function EditModal({ customer, onClose, onSuccess }: EditModalProps) {
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { tenant } = useTenant();
 
   const [customer,    setCustomer]    = useState<CustomerDetail | null>(null);
   const [ledger,      setLedger]      = useState<LedgerEntry[]>([]);
@@ -330,7 +333,10 @@ export default function ClientDetailPage() {
   };
 
   const whatsappLink = shareUrl
-    ? `https://wa.me/?text=${encodeURIComponent('Consultez votre compte ici : ' + shareUrl)}`
+    ? buildWhatsappLink(
+        customer?.phone,
+        `Bonjour ${customer?.name ?? ''}, voici votre espace client ${tenant?.name ?? ''} où vous pouvez consulter vos factures et votre solde : ${shareUrl}`
+      )
     : '';
 
   if (loading) {
@@ -541,9 +547,9 @@ export default function ClientDetailPage() {
                 href={whatsappLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-control font-medium text-sm border border-line text-muted hover:text-ink hover:border-ink transition-colors"
+                className="flex-1 inline-flex items-center justify-center gap-2 min-h-[40px] px-4 rounded-control font-semibold text-sm bg-[#25D366] text-white hover:bg-[#1eb357] transition-colors"
               >
-                WhatsApp
+                <MessageCircle size={16} /> WhatsApp
               </a>
             </div>
             <div className="flex items-center justify-between">
