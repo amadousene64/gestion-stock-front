@@ -1,6 +1,7 @@
 import {
   HomeIcon, CaisseIcon, ProduitsIcon, ClientsIcon, StockIcon,
   BoutiquesIcon, EmployesIcon, DepensesIcon, FacturesIcon, VentesIcon, StatsIcon,
+  JournalIcon,
 } from '../components/ui/icons';
 import type { ComponentType } from 'react';
 
@@ -22,8 +23,9 @@ export const COMMON_ITEMS: NavItem[] = [
 ];
 
 export const OWNER_ITEMS: NavItem[] = [
-  { path: '/boutiques',    label: 'Boutiques',    Icon: BoutiquesIcon },
-  { path: '/employes',     label: 'Employés',     Icon: EmployesIcon },
-  { path: '/depenses',     label: 'Dépenses',     Icon: DepensesIcon },
-  { path: '/statistiques', label: 'Statistiques', Icon: StatsIcon },
+  { path: '/boutiques',        label: 'Boutiques',        Icon: BoutiquesIcon },
+  { path: '/employes',         label: 'Employés',         Icon: EmployesIcon },
+  { path: '/depenses',         label: 'Dépenses',         Icon: DepensesIcon },
+  { path: '/journal-activite', label: 'Journal',          Icon: JournalIcon },
+  { path: '/statistiques',     label: 'Statistiques',     Icon: StatsIcon },
 ];

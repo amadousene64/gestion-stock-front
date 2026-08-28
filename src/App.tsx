@@ -4,6 +4,7 @@ import { TenantProvider } from './contexts/TenantContext';
 import { UserProfileProvider } from './contexts/UserProfileContext';
 import { BoutiqueProvider } from './contexts/BoutiqueContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import RequireOwner from './components/RequireOwner';
 import AdminRoute from './components/AdminRoute';
 import AppLayout from './layout/AppLayout';
 import AdminLayout from './layout/AdminLayout';
@@ -28,6 +29,7 @@ import ParametresCommercePage from './pages/ParametresCommercePage';
 import FacturesPage from './pages/FacturesPage';
 import VentesPage from './pages/VentesPage';
 import StatistiquesPage from './pages/StatistiquesPage';
+import JournalActivitePage from './pages/JournalActivitePage';
 import PortailClientPage from './pages/PortailClientPage';
 import AbonnementPage from './pages/AbonnementPage';
 import MonAbonnementPage from './pages/MonAbonnementPage';
@@ -64,6 +66,10 @@ export default function App() {
                     <Route path="/factures"            element={<FacturesPage />} />
                     <Route path="/ventes"              element={<VentesPage />} />
                     <Route path="/statistiques"        element={<StatistiquesPage />} />
+
+                    <Route element={<RequireOwner />}>
+                      <Route path="/journal-activite" element={<JournalActivitePage />} />
+                    </Route>
                     <Route path="/parametres-commerce" element={<ParametresCommercePage />} />
                     <Route path="/abonnement"          element={<AbonnementPage />} />
                     <Route path="/mon-abonnement"      element={<MonAbonnementPage />} />
