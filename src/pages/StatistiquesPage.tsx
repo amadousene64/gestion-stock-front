@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import PremiumGate from '../components/PremiumGate';
-import { Loader2 } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Minus, Calendar } from 'lucide-react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -24,6 +24,9 @@ import {
   type CashflowDay,
   type TopDebtor,
   type Period,
+  type RevenuePeriod,
+  type RevenueSummary,
+  type RevenueSeriesPoint,
 } from '../services/statsApi';
 
 // ─── Couleurs ────────────────────────────────────────────────────────────────
@@ -226,6 +229,189 @@ function EmptyChart({ message = 'Pas encore assez de données pour cette périod
   );
 }
 
+// ─── Suivi du CA — période, comparaison, graphique d'évolution ────────────────
+
+const REVENUE_PERIODS: { key: RevenuePeriod; label: string }[] = [
+  { key: 'today',      label: "Aujourd'hui" },
+  { key: 'yesterday',  label: 'Hier' },
+  { key: '7d',         label: '7 jours' },
+  { key: '30d',        label: '30 jours' },
+  { key: 'month',      label: 'Ce mois' },
+  { key: 'last_month', label: 'Mois dernier' },
+  { key: 'custom',     label: 'Personnalisé' },
+];
+
+const PREVIOUS_LABEL: Record<RevenuePeriod, string> = {
+  today:       'hier',
+  yesterday:   'avant-hier',
+  '7d':        'les 7 jours précédents',
+  '30d':       'les 30 jours précédents',
+  month:       'la même période le mois dernier',
+  last_month:  'il y a 2 mois',
+  custom:      'la période précédente',
+};
+
+function toIsoLocal(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+function fmtMonthLabel(label: string) {
+  const [y, m] = label.split('-').map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+}
+
+function RevenueSeriesTooltip({ active, payload, label, isMonthly }: {
+  active?: boolean; payload?: { value: number; payload: RevenueSeriesPoint }[]; label?: string; isMonthly: boolean;
+}) {
+  if (!active || !payload?.length || !label) return null;
+  const { count } = payload[0].payload;
+  return (
+    <TooltipBox>
+      <p className="text-muted mb-1">{isMonthly ? fmtMonthLabel(label) : fmtDate(label)}</p>
+      <p className="font-semibold text-ink">{fmtFCFA(payload[0].value)}</p>
+      <p className="text-muted">{count} vente{count !== 1 ? 's' : ''}</p>
+    </TooltipBox>
+  );
+}
+
+function RevenueTrackingSection() {
+  const { activeBoutiqueId } = useBoutique();
+
+  const [period, setPeriod]         = useState<RevenuePeriod>('30d');
+  const [customFrom, setCustomFrom] = useState(toIsoLocal(new Date(Date.now() - 29 * 86_400_000)));
+  const [customTo, setCustomTo]     = useState(toIsoLocal(new Date()));
+
+  const [summary, setSummary] = useState<RevenueSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr]         = useState('');
+
+  useEffect(() => {
+    if (period === 'custom' && (!customFrom || !customTo || customFrom > customTo)) return;
+    let dead = false;
+    setLoading(true); setErr('');
+    statsApi.getRevenueSummary({
+      period,
+      storeId: activeBoutiqueId,
+      from: period === 'custom' ? customFrom : undefined,
+      to:   period === 'custom' ? customTo   : undefined,
+    })
+      .then(d => { if (!dead) setSummary(d); })
+      .catch(() => { if (!dead) setErr('Impossible de charger le chiffre d\'affaires.'); })
+      .finally(() => { if (!dead) setLoading(false); });
+    return () => { dead = true; };
+  }, [period, customFrom, customTo, activeBoutiqueId]);
+
+  const isMonthly = summary?.granularity === 'month';
+  const hasSeries = (summary?.series ?? []).some(p => p.total > 0);
+  const seriesXInterval = !summary ? 0 : summary.series.length > 20 ? Math.ceil(summary.series.length / 8) : 0;
+
+  const pct = summary?.changePct ?? null;
+  const isNew = pct === null;
+  const isUp = pct !== null && pct > 0;
+  const isDown = pct !== null && pct < 0;
+
+  return (
+    <ChartCard title="Suivi du chiffre d'affaires" subtitle="Ventes encaissées + à crédit, hors ventes annulées">
+      {/* Sélecteur de période */}
+      <div className="flex gap-1.5 flex-wrap mb-4">
+        {REVENUE_PERIODS.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => setPeriod(key)}
+            className={`text-xs px-3 py-2 rounded-control border font-medium transition-colors
+              ${period === key
+                ? 'bg-ink text-white border-ink'
+                : 'bg-surface text-muted border-line hover:border-ink hover:text-ink'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Période personnalisée */}
+      {period === 'custom' && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+          <div>
+            <label className="text-xs text-muted mb-1 flex items-center gap-1.5">
+              <Calendar size={13} className="text-muted shrink-0" /> Du
+            </label>
+            <input
+              type="date"
+              value={customFrom}
+              max={customTo}
+              onChange={e => setCustomFrom(e.target.value)}
+              className="w-full min-h-[40px] rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted mb-1 block">Au</label>
+            <input
+              type="date"
+              value={customTo}
+              min={customFrom}
+              max={toIsoLocal(new Date())}
+              onChange={e => setCustomTo(e.target.value)}
+              className="w-full min-h-[40px] rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <ChartSkeleton height={280} />
+      ) : err ? (
+        <EmptyChart message={err} />
+      ) : !summary ? (
+        <EmptyChart />
+      ) : (
+        <div className="space-y-5">
+          {/* CA total + détail + tendance */}
+          <div>
+            <p className="font-display text-3xl font-bold text-ink">{fmtFCFA(summary.current.total)}</p>
+            <p className="text-xs text-muted mt-1">
+              dont encaissé <span className="font-medium text-ink">{fmtFCFA(summary.current.cash)}</span>
+              {' · '}à crédit <span className="font-medium text-ink">{fmtFCFA(summary.current.credit)}</span>
+            </p>
+
+            <div className="flex items-center gap-1.5 mt-2">
+              {isNew ? (
+                <span className="inline-flex items-center gap-1 text-xs font-semibold text-muted bg-canvas rounded-control px-2 py-1">
+                  <Minus size={12} /> Nouveau
+                </span>
+              ) : (
+                <span
+                  className={`inline-flex items-center gap-1 text-xs font-semibold rounded-control px-2 py-1
+                    ${isUp ? 'text-[#2e7d5b] bg-emerald-50' : isDown ? 'text-[#c23b36] bg-red-50' : 'text-muted bg-canvas'}`}
+                >
+                  {isUp ? <TrendingUp size={12} /> : isDown ? <TrendingDown size={12} /> : <Minus size={12} />}
+                  {pct !== null ? `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%` : ''}
+                </span>
+              )}
+              <span className="text-xs text-muted">vs {PREVIOUS_LABEL[period]}</span>
+            </div>
+          </div>
+
+          {/* Graphique d'évolution */}
+          {!hasSeries ? <EmptyChart /> : (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={summary.series} margin={{ top: 4, right: 8, left: -8, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C_GRID} vertical={false} />
+                <XAxis dataKey="label" tickFormatter={isMonthly ? fmtMonthLabel : fmtDate}
+                  tick={{ fontSize: 11, fill: C_MUTED }} tickLine={false} axisLine={false} interval={seriesXInterval} />
+                <YAxis tickFormatter={fmtK}
+                  tick={{ fontSize: 11, fill: C_MUTED }} tickLine={false} axisLine={false} width={52} />
+                <Tooltip content={<RevenueSeriesTooltip isMonthly={isMonthly} />} />
+                <Line type="monotone" dataKey="total" stroke={C_BRAND} strokeWidth={2}
+                  dot={false} activeDot={{ r: 4, fill: C_BRAND, strokeWidth: 0 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      )}
+    </ChartCard>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function StatistiquesPage() {
@@ -399,7 +585,10 @@ function StatistiquesContent({
         </div>
       </div>
 
-      {/* ── Graphique 1 : Évolution du CA ─────────────────────────────────── */}
+      {/* ── Suivi du CA : période enrichie, comparaison, tendance ─────────── */}
+      <RevenueTrackingSection />
+
+      {/* ── Graphique 1 : Évolution du CA (période globale de la page) ────── */}
       <ChartCard title="Évolution du chiffre d'affaires">
         {loadingSales ? <ChartSkeleton /> : errSales ? <EmptyChart message={errSales} /> : !hasRevenue ? (
           <EmptyChart />
